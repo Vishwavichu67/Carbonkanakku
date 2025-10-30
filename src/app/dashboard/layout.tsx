@@ -49,14 +49,6 @@ export default function DashboardLayout({
             <SidebarFooter>
               <SidebarMenu>
                 <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip={{children: 'Settings'}}>
-                        <Link href="/dashboard/settings">
-                            <Settings />
-                            <span>Settings</span>
-                        </Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
                     <SidebarMenuButton asChild tooltip={{children: 'Log Out'}}>
                         <Link href="/">
                             <LogOut />
