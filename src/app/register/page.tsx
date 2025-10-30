@@ -9,25 +9,34 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { subdomains } from '@/lib/constants';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import { useAuth } from '@/firebase';
+import { useState, useEffect } from 'react';
+import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function RegisterPage() {
     const { toast } = useToast();
     const router = useRouter();
     const auth = useAuth();
+    const firestore = useFirestore();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [isClient, setIsClient] = useState(false);
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        if (!auth) {
+        if (!auth || !firestore) {
             toast({
                 variant: 'destructive',
                 title: "Error",
-                description: "Authentication service is not available.",
+                description: "Authentication or database service is not available.",
             });
             return;
         }
@@ -42,7 +51,50 @@ export default function RegisterPage() {
         }
 
         try {
-            await createUserWithEmailAndPassword(auth, email, password);
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+
+            const formData = new FormData(event.currentTarget);
+            const companyData = {
+                ownerUid: user.uid,
+                companyName: formData.get('companyName') as string,
+                location: formData.get('location') as string,
+                subdomain: formData.get('subdomain') as string,
+                capacity: Number(formData.get('capacity')),
+                employees: Number(formData.get('employees')),
+                yearlyOutput: Number(formData.get('yearlyOutput')),
+                complianceLevel: formData.get('compliance') as string,
+                createdAt: serverTimestamp(),
+            };
+
+            const companyRef = await addDoc(collection(firestore, 'companies'), companyData).catch((serverError) => {
+                const permissionError = new FirestorePermissionError({
+                    path: 'companies',
+                    operation: 'create',
+                    requestResourceData: companyData,
+                });
+                errorEmitter.emit('permission-error', permissionError);
+                throw serverError; // re-throw to be caught by outer try-catch
+            });
+
+            const userRef = doc(firestore, `users/${user.uid}`);
+            const userData = {
+                uid: user.uid,
+                email: user.email,
+                companyId: companyRef.id,
+            };
+            
+            setDoc(userRef, userData, { merge: true }).catch(async (serverError) => {
+              const permissionError = new FirestorePermissionError({
+                path: userRef.path,
+                operation: 'update',
+                requestResourceData: userData,
+              });
+              errorEmitter.emit('permission-error', permissionError);
+              throw serverError; // re-throw to be caught by outer try-catch
+            });
+
+
             toast({
                 title: "Registration Successful!",
                 description: "Redirecting you to the dashboard.",
@@ -69,14 +121,14 @@ export default function RegisterPage() {
             <CardDescription>Start your sustainability journey. Create an account and tell us about your factory.</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {isClient && <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6" key={isClient ? 'client' : 'server'}>
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="name@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
+                <Input id="email" name="email" type="email" placeholder="name@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+                <Input id="password" name="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirm-password">Confirm Password</Label>
@@ -87,16 +139,16 @@ export default function RegisterPage() {
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                         <Label htmlFor="companyName">Company Name</Label>
-                        <Input id="companyName" placeholder="Your Company Ltd." required />
+                        <Input id="companyName" name="companyName" placeholder="Your Company Ltd." required />
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="location">Location</Label>
-                        <Input id="location" placeholder="Tiruppur, Tamil Nadu" required />
+                        <Input id="location" name="location" placeholder="Tiruppur, Tamil Nadu" required />
                     </div>
 
                     <div className="space-y-2 md:col-span-2">
                         <Label htmlFor="subdomain">Industry Subdomain</Label>
-                        <Select required>
+                        <Select required name="subdomain">
                         <SelectTrigger id="subdomain">
                             <SelectValue placeholder="Select your factory type" />
                         </SelectTrigger>
@@ -112,19 +164,19 @@ export default function RegisterPage() {
 
                     <div className="space-y-2">
                         <Label htmlFor="capacity">Capacity (e.g., tons/year)</Label>
-                        <Input id="capacity" type="number" placeholder="1000" required />
+                        <Input id="capacity" name="capacity" type="number" placeholder="1000" required />
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="employees">Number of Employees</Label>
-                        <Input id="employees" type="number" placeholder="250" required />
+                        <Input id="employees" name="employees" type="number" placeholder="250" required />
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="yearlyOutput">Yearly Output (e.g., units)</Label>
-                        <Input id="yearlyOutput" type="number" placeholder="500000" required />
+                        <Input id="yearlyOutput" name="yearlyOutput" type="number" placeholder="500000" required />
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="compliance">Compliance Level</Label>
-                        <Select required>
+                        <Select required name="compliance">
                         <SelectTrigger id="compliance">
                             <SelectValue placeholder="Select compliance level" />
                         </SelectTrigger>
@@ -143,7 +195,7 @@ export default function RegisterPage() {
                   Create Account
                 </Button>
               </div>
-            </form>
+            </form>}
             <div className="mt-4 text-center text-sm">
               Already have an account?{' '}
               <Link href="/login" className="underline text-primary">

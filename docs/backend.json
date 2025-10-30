@@ -22,9 +22,47 @@
           "type": "string",
           "format": "uri",
           "description": "URL of the user's profile picture"
+        },
+        "companyId": {
+          "type": "string",
+          "description": "The ID of the company associated with the user"
         }
       },
       "required": ["uid", "email"]
+    },
+    "Company": {
+      "title": "Company",
+      "description": "A company registered on the platform",
+      "type": "object",
+      "properties": {
+        "ownerUid": {
+          "type": "string",
+          "description": "The UID of the user who owns the company"
+        },
+        "companyName": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "subdomain": {
+          "type": "string"
+        },
+        "capacity": {
+          "type": "number"
+        },
+        "employees": {
+          "type": "number"
+        },
+        "yearlyOutput": {
+          "type": "number"
+        },
+        "complianceLevel": {
+          "type": "string",
+          "enum": ["basic", "intermediate", "certified"]
+        }
+      },
+      "required": ["ownerUid", "companyName", "location", "subdomain"]
     }
   },
   "auth": {
@@ -36,6 +74,12 @@
         "$ref": "#/entities/User"
       },
       "description": "Stores user profile information."
+    },
+    "/companies/{companyId}": {
+      "schema": {
+        "$ref": "#/entities/Company"
+      },
+      "description": "Stores company profile information."
     }
   }
 }
