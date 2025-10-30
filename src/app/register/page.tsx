@@ -58,7 +58,6 @@ export default function RegisterPage() {
                 ownerUid: user.uid,
                 companyName: formData.get('companyName') as string,
                 location: formData.get('location') as string,
-                subdomain: formData.get('subdomain') as string,
                 capacity: Number(formData.get('capacity')),
                 employees: Number(formData.get('employees')),
                 yearlyOutput: Number(formData.get('yearlyOutput')),
