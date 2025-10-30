@@ -17,7 +17,6 @@ export const dashboardNav = [
     { title: 'Data Input', href: '/dashboard/data-input', icon: FileText },
     { title: 'Analysis', href: '/dashboard/analysis', icon: ChartPie },
     { title: 'Reports', href: '/dashboard/reports', icon: Award },
-    { title: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];
 
 export const whySustainabilityMatters = [
