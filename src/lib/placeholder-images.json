@@ -1,3 +1,70 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero-banner",
+      "description": "A panoramic view of a modern, clean textile factory with lush greenery outside, symbolizing sustainability.",
+      "imageUrl": "https://images.unsplash.com/photo-1526290766257-c015850e4629?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHx0ZXh0aWxlJTIwZmFjdG9yeXxlbnwwfHx8fDE3NjE4MTg1MzV8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "textile factory"
+    },
+    {
+      "id": "emission-infographic",
+      "description": "A conceptual image representing the flow of materials and energy in the textile process.",
+      "imageUrl": "https://images.unsplash.com/photo-1758272024360-a95be2abe403?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxpbmR1c3RyaWFsJTIwcHJvY2Vzc3xlbnwwfHx8fDE3NjE4MTg1MzV8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "industrial process"
+    },
+    {
+      "id": "spinning-units",
+      "description": "Close-up of a spinning machine with threads.",
+      "imageUrl": "https://images.unsplash.com/photo-1655809383399-d02691cbf3d9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8c3Bpbm5pbmclMjBtYWNoaW5lfGVufDB8fHx8MTc2MTgxODUzNXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "spinning machine"
+    },
+    {
+      "id": "weaving-mills",
+      "description": "A traditional or modern weaving loom in action.",
+      "imageUrl": "https://images.unsplash.com/photo-1569909115134-a0426936c879?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHx3ZWF2aW5nJTIwbG9vbXxlbnwwfHx8fDE3NjE3NTg0MzN8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "weaving loom"
+    },
+    {
+      "id": "garment-manufacturing",
+      "description": "Sewing machines in a garment factory.",
+      "imageUrl": "https://images.unsplash.com/photo-1486622923572-7a7e18acf192?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxzZXdpbmclMjBtYWNoaW5lc3xlbnwwfHx8fDE3NjE4MTg1MzV8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "sewing machines"
+    },
+    {
+      "id": "dyeing-processing",
+      "description": "Colorful dyes in large vats.",
+      "imageUrl": "https://images.unsplash.com/photo-1603861502740-1e47ec530293?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxjb2xvcmZ1bCUyMGR5ZXN8ZW58MHx8fHwxNzYxODE4NTM1fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "colorful dyes"
+    },
+    {
+      "id": "packaging-logistics",
+      "description": "Boxes and packages in a warehouse ready for shipping.",
+      "imageUrl": "https://images.unsplash.com/photo-1567335632614-abebe179111e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHx3YXJlaG91c2UlMjBwYWNrYWdlc3xlbnwwfHx8fDE3NjE4MTg1MzV8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "warehouse packages"
+    },
+    {
+      "id": "recycling-waste",
+      "description": "Bales of recycled textiles.",
+      "imageUrl": "https://images.unsplash.com/photo-1714129018462-d17982bfafb3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxyZWN5Y2xlZCUyMHRleHRpbGVzfGVufDB8fHx8MTc2MTgxODUzNXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "recycled textiles"
+    },
+    {
+      "id": "case-study-1",
+      "description": "Workers in a sustainable textile factory.",
+      "imageUrl": "https://images.unsplash.com/photo-1564182842834-681b7be6de4b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxmYWN0b3J5JTIwd29ya2Vyc3xlbnwwfHx8fDE3NjE4MTg1MzV8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "factory workers"
+    },
+    {
+      "id": "case-study-2",
+      "description": "Solar panels on the roof of a textile mill.",
+      "imageUrl": "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxzb2xhciUyMHBhbmVsc3xlbnwwfHx8fDE3NjE3ODc4Mzd8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "solar panels"
+    },
+    {
+      "id": "case-study-3",
+      "description": "A water treatment plant at a factory.",
+      "imageUrl": "https://images.unsplash.com/photo-1678724693710-e437636052a3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHx3YXRlciUyMHRyZWF0bWVudHxlbnwwfHx8fDE3NjE4MTg1MzV8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "water treatment"
+    }
+  ]
 }
