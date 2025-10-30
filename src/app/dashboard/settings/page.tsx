@@ -101,7 +101,7 @@ export default function SettingsPage() {
       });
   };
 
-  const isLoading = userLoading || userDocLoading || (userDoc && !companyDocPath) || (companyDocPath && companyDocLoading);
+  const isLoading = userLoading || userDocLoading || (userDoc && userDoc.companyId && companyDocLoading);
 
   if (isLoading) {
     return (
