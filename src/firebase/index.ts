@@ -34,6 +34,7 @@ export {
   useFirebaseApp,
   useAuth,
   useFirestore,
+  useMemoFirebase,
 } from './provider';
 export { FirebaseClientProvider } from './client-provider';
 export { useCollection } from './firestore/use-collection';
