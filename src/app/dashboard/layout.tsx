@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Logo } from "@/components/logo";
 import { dashboardNav } from "@/lib/constants";
-import { LogOut } from "lucide-react";
+import { LogOut, Settings } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 
 export default function DashboardLayout({
@@ -21,36 +21,41 @@ export default function DashboardLayout({
 }) {
   return (
     <SidebarProvider>
-      <div className="min-h-screen md:flex">
-        <Sidebar
-          variant="sidebar"
-          collapsible="icon"
-          className="bg-card border-r"
-        >
-          <SidebarHeader>
-            <div className="group-data-[collapsible=icon]:hidden">
-              <Logo />
-            </div>
-          </SidebarHeader>
-          <SidebarContent>
-            <SidebarMenu>
-              {dashboardNav.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    tooltip={{ children: item.title }}
-                  >
-                    <Link href={item.href}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
+      <div className="min-h-screen">
+        <SiteHeader />
+        <div className="flex">
+          <Sidebar
+            variant="sidebar"
+            collapsible="icon"
+            className="bg-card border-r h-[calc(100vh-4rem)] sticky top-16"
+          >
+            <SidebarContent>
+              <SidebarMenu>
+                {dashboardNav.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      tooltip={{ children: item.title }}
+                    >
+                      <Link href={item.href}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarContent>
+            <SidebarFooter>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip={{children: 'Settings'}}>
+                        <Link href="/dashboard/settings">
+                            <Settings />
+                            <span>Settings</span>
+                        </Link>
+                    </SidebarMenuButton>
                 </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarContent>
-          <SidebarFooter>
-             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton asChild tooltip={{children: 'Log Out'}}>
                         <Link href="/">
@@ -59,15 +64,13 @@ export default function DashboardLayout({
                         </Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
-             </SidebarMenu>
-          </SidebarFooter>
-        </Sidebar>
-        <main className="flex-1 flex flex-col">
-          <SiteHeader />
-          <div className="flex-1 overflow-y-auto bg-secondary/50">
+              </SidebarMenu>
+            </SidebarFooter>
+          </Sidebar>
+          <main className="flex-1 bg-secondary/50">
             <div className="container py-8">{children}</div>
-          </div>
-        </main>
+          </main>
+        </div>
       </div>
     </SidebarProvider>
   );
