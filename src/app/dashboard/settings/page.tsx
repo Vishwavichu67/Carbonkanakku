@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,7 +22,7 @@ export default function SettingsPage() {
   const [companyId, setCompanyId] = useState<string | null>(null);
 
   const userDocPath = user ? `users/${user.uid}` : null;
-  const { data: userDoc, loading: userDocLoading } = useDoc<any>(userDocPath!);
+  const { data: userDoc, loading: userDocLoading } = useDoc<any>(userDocPath);
 
   useEffect(() => {
     if (userDoc && userDoc.companyId) {
@@ -31,12 +31,16 @@ export default function SettingsPage() {
   }, [userDoc]);
 
   const companyDocPath = companyId ? `companies/${companyId}` : null;
-  const { data: companyDoc, loading: companyDocLoading } = useDoc<any>(companyDocPath!);
+  const { data: companyDoc, loading: companyDocLoading } = useDoc<any>(companyDocPath);
   
   const [displayName, setDisplayName] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [location, setLocation] = useState('');
   const [subdomain, setSubdomain] = useState('');
+  const [capacity, setCapacity] = useState<number | ''>('');
+  const [employees, setEmployees] = useState<number | ''>('');
+  const [yearlyOutput, setYearlyOutput] = useState<number | ''>('');
+  const [complianceLevel, setComplianceLevel] = useState('');
 
 
   useEffect(() => {
@@ -47,6 +51,10 @@ export default function SettingsPage() {
       setCompanyName(companyDoc.companyName || '');
       setLocation(companyDoc.location || '');
       setSubdomain(companyDoc.subdomain || '');
+      setCapacity(companyDoc.capacity || '');
+      setEmployees(companyDoc.employees || '');
+      setYearlyOutput(companyDoc.yearlyOutput || '');
+      setComplianceLevel(companyDoc.complianceLevel || '');
     }
   }, [user, companyDoc]);
 
@@ -74,7 +82,15 @@ export default function SettingsPage() {
     if (!firestore || !companyId) return;
 
     const companyRef = doc(firestore, `companies/${companyId}`);
-    const companyData = { companyName, location, subdomain };
+    const companyData = { 
+        companyName, 
+        location, 
+        subdomain,
+        capacity: Number(capacity),
+        employees: Number(employees),
+        yearlyOutput: Number(yearlyOutput),
+        complianceLevel,
+    };
     setDoc(companyRef, companyData, { merge: true }).catch(async (serverError) => {
         const permissionError = new FirestorePermissionError({
           path: companyRef.path,
@@ -188,6 +204,31 @@ export default function SettingsPage() {
                             {item.name}
                           </SelectItem>
                         ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="capacity">Capacity (e.g., tons/year)</Label>
+                    <Input id="capacity" type="number" value={capacity} onChange={(e) => setCapacity(Number(e.target.value))} placeholder="1000" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="employees">Number of Employees</Label>
+                    <Input id="employees" type="number" value={employees} onChange={(e) => setEmployees(Number(e.target.value))} placeholder="250" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="yearlyOutput">Yearly Output (e.g., units)</Label>
+                    <Input id="yearlyOutput" type="number" value={yearlyOutput} onChange={(e) => setYearlyOutput(Number(e.target.value))} placeholder="500000" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="complianceLevel">Compliance Level</Label>
+                    <Select value={complianceLevel} onValueChange={setComplianceLevel}>
+                      <SelectTrigger id="complianceLevel">
+                        <SelectValue placeholder="Select compliance level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="basic">Basic</SelectItem>
+                        <SelectItem value="intermediate">Intermediate</SelectItem>
+                        <SelectItem value="certified">Certified</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
