@@ -25,6 +25,8 @@ export default function RegisterPage() {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isClient, setIsClient] = useState(false);
+    const [emailError, setEmailError] = useState('');
+    const [passwordError, setPasswordError] = useState('');
 
     useEffect(() => {
         setIsClient(true);
@@ -32,6 +34,19 @@ export default function RegisterPage() {
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+        setEmailError('');
+        setPasswordError('');
+
+        if (password !== confirmPassword) {
+            setPasswordError("Passwords do not match.");
+            return;
+        }
+
+        if (password.length < 6) {
+            setPasswordError("Password should be at least 6 characters.");
+            return;
+        }
+
         if (!auth || !firestore) {
             toast({
                 variant: 'destructive',
@@ -40,21 +55,13 @@ export default function RegisterPage() {
             });
             return;
         }
-
-        if (password !== confirmPassword) {
-            toast({
-                variant: 'destructive',
-                title: "Password Mismatch",
-                description: "The passwords you entered do not match.",
-            });
-            return;
-        }
+        
+        const formData = new FormData(event.currentTarget);
 
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
 
-            const formData = new FormData(event.currentTarget);
             const companyData = {
                 ownerUid: user.uid,
                 companyName: formData.get('companyName') as string,
@@ -68,15 +75,7 @@ export default function RegisterPage() {
             };
 
             const companiesCollectionRef = collection(firestore, 'companies');
-            const companyRef = await addDoc(companiesCollectionRef, companyData).catch((serverError) => {
-                const permissionError = new FirestorePermissionError({
-                    path: companiesCollectionRef.path,
-                    operation: 'create',
-                    requestResourceData: companyData,
-                });
-                errorEmitter.emit('permission-error', permissionError);
-                throw serverError; 
-            });
+            const companyRef = await addDoc(companiesCollectionRef, companyData);
 
             const userRef = doc(firestore, `users/${user.uid}`);
             const userData = {
@@ -85,16 +84,7 @@ export default function RegisterPage() {
                 companyId: companyRef.id,
             };
             
-            await setDoc(userRef, userData, { merge: true }).catch(async (serverError) => {
-              const permissionError = new FirestorePermissionError({
-                path: userRef.path,
-                operation: 'create',
-                requestResourceData: userData,
-              });
-              errorEmitter.emit('permission-error', permissionError);
-              throw serverError;
-            });
-
+            await setDoc(userRef, userData, { merge: true });
 
             toast({
                 title: "Registration Successful!",
@@ -102,12 +92,15 @@ export default function RegisterPage() {
             });
             router.push('/dashboard');
         } catch (error: any) {
-            console.error("Registration Failed:", error);
-            toast({
-                variant: 'destructive',
-                title: "Registration Failed",
-                description: error.message || "An unexpected error occurred.",
-            });
+            if (error.code === 'auth/email-already-in-use') {
+                setEmailError('This email is already in use. Please log in.');
+            } else {
+                toast({
+                    variant: 'destructive',
+                    title: "Registration Failed",
+                    description: error.message || "An unexpected error occurred.",
+                });
+            }
         }
     }
 
@@ -133,6 +126,7 @@ export default function RegisterPage() {
                                 <div className="space-y-2">
                                     <Label htmlFor="email">Email</Label>
                                     <Input id="email" name="email" type="email" placeholder="name@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
+                                    {emailError && <p className="text-sm font-medium text-destructive">{emailError}</p>}
                                 </div>
                                 <div className="space-y-2">
                                     {/* Spacer */}
@@ -144,6 +138,7 @@ export default function RegisterPage() {
                                 <div className="space-y-2">
                                     <Label htmlFor="confirm-password">Confirm Password</Label>
                                     <Input id="confirm-password" type="password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+                                    {passwordError && <p className="text-sm font-medium text-destructive">{passwordError}</p>}
                                 </div>
                             </div>
                         </div>
