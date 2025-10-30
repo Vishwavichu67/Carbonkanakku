@@ -1,5 +1,8 @@
 'use client';
-import { useUser, useDoc } from '@/firebase';
+import { useUser, useDoc, useAuth } from '@/firebase';
+import { signOut } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
 import {
   Avatar,
   AvatarFallback,
@@ -20,12 +23,34 @@ import { Skeleton } from './ui/skeleton';
 
 export function UserNav() {
   const { user, loading: userLoading } = useUser();
+  const auth = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
   const userDocPath = user ? `users/${user.uid}` : null;
   const { data: userDoc, loading: userDocLoading } = useDoc<any>(userDocPath);
 
   const displayName = userDoc?.displayName || user?.displayName || 'User';
   const email = user?.email || 'user@example.com';
   const avatarFallback = (displayName?.[0] || 'U').toUpperCase();
+
+  const handleLogout = async () => {
+    if (!auth) return;
+    try {
+      await signOut(auth);
+      toast({
+        title: "Logged Out",
+        description: "You have been successfully logged out.",
+      });
+      router.push('/');
+    } catch (error) {
+      console.error("Logout failed:", error);
+      toast({
+        variant: "destructive",
+        title: "Logout Failed",
+        description: "An error occurred while logging out.",
+      });
+    }
+  };
 
   if (userLoading || userDocLoading) {
     return <Skeleton className="h-9 w-9 rounded-full" />;
@@ -57,8 +82,8 @@ export function UserNav() {
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href="/">Log out</Link>
+        <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+          Log out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
