@@ -9,10 +9,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { subdomains } from '@/lib/constants';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 
 export default function RegisterPage() {
     const { toast } = useToast();
     const router = useRouter();
+    const [isClient, setIsClient] = useState(false);
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
 
     const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -35,7 +41,7 @@ export default function RegisterPage() {
             <CardDescription>Start your sustainability journey. Tell us about your factory.</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {isClient && <form key={isClient.toString()} onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="companyName">Company Name</Label>
                 <Input id="companyName" placeholder="Your Company Ltd." required />
@@ -97,7 +103,7 @@ export default function RegisterPage() {
                   Create Account
                 </Button>
               </div>
-            </form>
+            </form>}
             <div className="mt-4 text-center text-sm">
               Already have an account?{' '}
               <Link href="/login" className="underline text-primary">
