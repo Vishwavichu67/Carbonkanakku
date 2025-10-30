@@ -1,11 +1,17 @@
+'use client';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Menu } from 'lucide-react';
 import { Logo } from './logo';
 import { mainNav } from '@/lib/constants';
+import { useUser } from '@/firebase';
+import { UserNav } from './user-nav';
+import { Skeleton } from './ui/skeleton';
 
 export function SiteHeader() {
+  const { user, loading } = useUser();
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
@@ -56,12 +62,20 @@ export function SiteHeader() {
         </Sheet>
         <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
           <nav className="flex items-center">
-            <Button variant="ghost" asChild>
-              <Link href="/login">Log In</Link>
-            </Button>
-            <Button asChild className="bg-primary text-primary-foreground">
-              <Link href="/register">Register</Link>
-            </Button>
+            {loading ? (
+              <Skeleton className="h-9 w-24" />
+            ) : user ? (
+              <UserNav />
+            ) : (
+              <>
+                <Button variant="ghost" asChild>
+                  <Link href="/login">Log In</Link>
+                </Button>
+                <Button asChild className="bg-primary text-primary-foreground">
+                  <Link href="/register">Register</Link>
+                </Button>
+              </>
+            )}
           </nav>
         </div>
       </div>
