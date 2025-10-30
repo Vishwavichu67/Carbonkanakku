@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { Logo } from '@/components/logo';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { addDoc, collection, doc, setDoc } from 'firebase/firestore';
@@ -23,6 +23,11 @@ export default function RegisterPage() {
   
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const auth = useAuth();
   const firestore = useFirestore();
@@ -46,8 +51,11 @@ export default function RegisterPage() {
       return;
     }
     if (!companyName.trim()) {
-        // This is a simple validation, can be improved
         toast({ variant: 'destructive', title: 'Company name is required.' });
+        return;
+    }
+    if (!displayName.trim()) {
+        toast({ variant: 'destructive', title: 'Your name is required.' });
         return;
     }
 
@@ -73,6 +81,13 @@ export default function RegisterPage() {
         ownerUid: user.uid,
         companyName: companyName,
         createdAt: new Date(),
+        // Add other company fields from your requirements here if needed
+        location: '',
+        subdomain: '',
+        capacity: 0,
+        employees: 0,
+        yearlyOutput: 0,
+        complianceLevel: 'basic',
       });
 
       // 4. Create a user profile document in Firestore
@@ -86,7 +101,7 @@ export default function RegisterPage() {
 
       toast({
         title: 'Registration Successful!',
-        description: 'Your account has been created. Please log in.',
+        description: 'Your account has been created. Redirecting to login...',
       });
 
       // 5. Redirect to login page
@@ -122,33 +137,35 @@ export default function RegisterPage() {
               <CardDescription>Join to start tracking your company&apos;s ESG metrics.</CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="companyName">Company Name</Label>
-                  <Input id="companyName" type="text" placeholder="Your Company Ltd." required value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="displayName">Your Name</Label>
-                  <Input id="displayName" type="text" placeholder="John Doe" required value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="name@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
-                   {emailError && <p className="text-sm font-medium text-destructive">{emailError}</p>}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm Password</Label>
-                  <Input id="confirmPassword" type="password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
-                  {passwordError && <p className="text-sm font-medium text-destructive">{passwordError}</p>}
-                </div>
-                <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-                  Register
-                </Button>
-              </form>
+              {isClient && (
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="companyName">Company Name</Label>
+                    <Input id="companyName" type="text" placeholder="Your Company Ltd." required value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="displayName">Your Name</Label>
+                    <Input id="displayName" type="text" placeholder="John Doe" required value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input id="email" type="email" placeholder="name@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
+                    {emailError && <p className="text-sm font-medium text-destructive">{emailError}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password</Label>
+                    <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                    <Input id="confirmPassword" type="password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+                    {passwordError && <p className="text-sm font-medium text-destructive">{passwordError}</p>}
+                  </div>
+                  <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
+                    Register
+                  </Button>
+                </form>
+              )}
               <div className="mt-4 text-center text-sm">
                 Already have an account?{' '}
                 <Link href="/login" className="underline text-primary">
