@@ -1,3 +1,5 @@
+'use client';
+import { useUser, useDoc } from '@/firebase';
 import {
   Avatar,
   AvatarFallback,
@@ -14,24 +16,37 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
+import { Skeleton } from './ui/skeleton';
 
 export function UserNav() {
+  const { user, loading: userLoading } = useUser();
+  const userDocPath = user ? `users/${user.uid}` : null;
+  const { data: userDoc, loading: userDocLoading } = useDoc<any>(userDocPath);
+
+  const displayName = userDoc?.displayName || user?.displayName || 'User';
+  const email = user?.email || 'user@example.com';
+  const avatarFallback = (displayName?.[0] || 'U').toUpperCase();
+
+  if (userLoading || userDocLoading) {
+    return <Skeleton className="h-9 w-9 rounded-full" />;
+  }
+  
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-9 w-9">
-            <AvatarImage src="https://picsum.photos/seed/avatar/100/100" alt="User Avatar" />
-            <AvatarFallback>U</AvatarFallback>
+            <AvatarImage src={user?.photoURL || ''} alt={displayName} />
+            <AvatarFallback>{avatarFallback}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">TextileCorp</p>
+            <p className="text-sm font-medium leading-none">{displayName}</p>
             <p className="text-xs leading-none text-muted-foreground">
-              user@textilecorp.com
+              {email}
             </p>
           </div>
         </DropdownMenuLabel>
