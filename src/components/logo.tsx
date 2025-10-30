@@ -44,7 +44,6 @@ const CustomLogo = ({ className }: { className?: string }) => (
     <path d="M74 40L71 43.5" stroke="currentColor" strokeWidth="3" />
     <path d="M68 28L65 31.5" stroke="currentColor" strokeWidth="3" />
     <path d="M60 19L57 22" stroke="currentColor" strokeWidth="3" />
-    <path d="M47 16L44 19" stroke="currentColor" strokeWidth="3" />
   </svg>
 );
 
