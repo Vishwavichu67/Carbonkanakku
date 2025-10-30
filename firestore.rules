@@ -1,0 +1,87 @@
+/**
+ * @fileoverview Firestore Security Rules for the application.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user and company ownership model. Users can only
+ * manage their own profiles, and companies can only be managed by their owners.
+ *
+ * Data Structure:
+ * - /users/{userId}: Stores individual user profiles.
+ * - /companies/{companyId}: Stores company profiles.
+ *
+ * Key Security Decisions:
+ * - Users cannot list all users.
+ * - Companies are owned by a specific user.
+ *
+ * Denormalization for Authorization:
+ * The `ownerUid` field is denormalized onto the `Company` document to enable
+ * simple `isOwner()` checks without additional reads.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Controls access to user profile information.
+     * @path /users/{userId}
+     * @allow (create) User with uid 'user123' can create their profile.
+     * @deny (create) User with uid 'user123' cannot create a profile for 'user456'.
+     * @allow (get) User with uid 'user123' can read their own profile.
+     * @deny (get) User with uid 'user123' cannot read the profile of 'user456'.
+     * @allow (update) User with uid 'user123' can update their own profile.
+     * @deny (update) User with uid 'user123' cannot update the profile of 'user456'.
+     * @allow (delete) User with uid 'user123' can delete their own profile.
+     * @deny (delete) User with uid 'user123' cannot delete the profile of 'user456'.
+     * @principle Enforces user-ownership for profile data.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Controls access to company profile information.
+     * @path /companies/{companyId}
+     * @allow (create) User with uid 'user123' can create a company with ownerUid 'user123'.
+     * @deny (create) User with uid 'user123' cannot create a company with ownerUid 'user456'.
+     * @allow (get) User with uid 'user123' can read company 'companyABC' if they are the owner.
+     * @deny (get) User with uid 'user123' cannot read company 'companyABC' if they are not the owner.
+     * @allow (update) User with uid 'user123' can update company 'companyABC' if they are the owner.
+     * @deny (update) User with uid 'user123' cannot update company 'companyABC' if they are not the owner.
+     * @allow (delete) User with uid 'user123' can delete company 'companyABC' if they are the owner.
+     * @deny (delete) User with uid 'user123' cannot delete company 'companyABC' if they are not the owner.
+     * @principle Enforces company ownership for profile data.
+     */
+    match /companies/{companyId} {
+      allow get: if isCompanyOwner(resource.data.ownerUid);
+      allow list: if true;
+      allow create: if request.resource.data.ownerUid == request.auth.uid;
+      allow update: if isExistingCompanyOwner(resource.data.ownerUid);
+      allow delete: if isExistingCompanyOwner(resource.data.ownerUid);
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    function isCompanyOwner(ownerUid) {
+          return isSignedIn() && request.auth.uid == ownerUid;
+    }
+
+    function isExistingCompanyOwner(ownerUid) {
+      return isCompanyOwner(ownerUid) && resource != null;
+    }
+  }
+}

@@ -6,7 +6,6 @@ import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { Logo } from '@/components/logo';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { subdomains } from '@/lib/constants';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
@@ -66,14 +65,15 @@ export default function RegisterPage() {
                 createdAt: serverTimestamp(),
             };
 
-            const companyRef = await addDoc(collection(firestore, 'companies'), companyData).catch((serverError) => {
+            const companiesCollectionRef = collection(firestore, 'companies');
+            const companyRef = await addDoc(companiesCollectionRef, companyData).catch((serverError) => {
                 const permissionError = new FirestorePermissionError({
-                    path: 'companies',
+                    path: companiesCollectionRef.path,
                     operation: 'create',
                     requestResourceData: companyData,
                 });
                 errorEmitter.emit('permission-error', permissionError);
-                throw serverError; // re-throw to be caught by outer try-catch
+                throw serverError; 
             });
 
             const userRef = doc(firestore, `users/${user.uid}`);
@@ -83,14 +83,14 @@ export default function RegisterPage() {
                 companyId: companyRef.id,
             };
             
-            setDoc(userRef, userData, { merge: true }).catch(async (serverError) => {
+            await setDoc(userRef, userData, { merge: true }).catch(async (serverError) => {
               const permissionError = new FirestorePermissionError({
                 path: userRef.path,
-                operation: 'update',
+                operation: 'create',
                 requestResourceData: userData,
               });
               errorEmitter.emit('permission-error', permissionError);
-              throw serverError; // re-throw to be caught by outer try-catch
+              throw serverError;
             });
 
 
@@ -100,10 +100,11 @@ export default function RegisterPage() {
             });
             router.push('/dashboard');
         } catch (error: any) {
+            console.error("Registration Failed:", error);
             toast({
                 variant: 'destructive',
                 title: "Registration Failed",
-                description: error.message,
+                description: error.message || "An unexpected error occurred.",
             });
         }
     }
@@ -120,22 +121,32 @@ export default function RegisterPage() {
             <CardDescription>Start your sustainability journey. Create an account and tell us about your factory.</CardDescription>
           </CardHeader>
           <CardContent>
-            {isClient && <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6" key={isClient ? 'client' : 'server'}>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" name="email" type="email" placeholder="name@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input id="password" name="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirm-password">Confirm Password</Label>
-                <Input id="confirm-password" type="password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
-              </div>
+            {isClient && (
+              <form onSubmit={handleSubmit} className="space-y-6" key={isClient ? 'client' : 'server'}>
+                <div className="space-y-4">
+                    <h3 className="text-lg font-medium font-headline">Account Credentials</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="email">Email</Label>
+                            <Input id="email" name="email" type="email" placeholder="name@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            {/* Spacer */}
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="password">Password</Label>
+                            <Input id="password" name="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="confirm-password">Confirm Password</Label>
+                            <Input id="confirm-password" type="password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+                        </div>
+                    </div>
+                </div>
 
-              <div className="md:col-span-2 border-t pt-6 mt-2 space-y-6">
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                 <h3 className="text-lg font-medium font-headline">Company Information</h3>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label htmlFor="companyName">Company Name</Label>
                         <Input id="companyName" name="companyName" placeholder="Your Company Ltd." required />
@@ -172,12 +183,13 @@ export default function RegisterPage() {
                  </div>
               </div>
 
-              <div className="md:col-span-2">
+              <div>
                 <Button type="submit" className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
                   Create Account
                 </Button>
               </div>
-            </form>}
+            </form>
+            )}
             <div className="mt-4 text-center text-sm">
               Already have an account?{' '}
               <Link href="/login" className="underline text-primary">

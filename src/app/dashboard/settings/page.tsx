@@ -19,18 +19,12 @@ export default function SettingsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const [companyId, setCompanyId] = useState<string | null>(null);
-
+  // Get user profile
   const userDocPath = user ? `users/${user.uid}` : null;
   const { data: userDoc, loading: userDocLoading } = useDoc<any>(userDocPath);
 
-  useEffect(() => {
-    if (userDoc && userDoc.companyId) {
-      setCompanyId(userDoc.companyId);
-    }
-  }, [userDoc]);
-
-  const companyDocPath = companyId ? `companies/${companyId}` : null;
+  // Get company profile, which depends on user profile
+  const companyDocPath = userDoc?.companyId ? `companies/${userDoc.companyId}` : null;
   const { data: companyDoc, loading: companyDocLoading } = useDoc<any>(companyDocPath);
   
   const [displayName, setDisplayName] = useState('');
@@ -60,9 +54,9 @@ export default function SettingsPage() {
 
   const handleProfileUpdate = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!firestore || !user) return;
+    if (!firestore || !userDocPath) return;
 
-    const userRef = doc(firestore, `users/${user.uid}`);
+    const userRef = doc(firestore, userDocPath);
     const userData = { displayName };
     setDoc(userRef, userData, { merge: true }).catch(async (serverError) => {
         const permissionError = new FirestorePermissionError({
@@ -79,9 +73,9 @@ export default function SettingsPage() {
 
   const handleCompanyUpdate = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!firestore || !companyId) return;
+    if (!firestore || !companyDocPath) return;
 
-    const companyRef = doc(firestore, `companies/${companyId}`);
+    const companyRef = doc(firestore, companyDocPath);
     const companyData = { 
         companyName, 
         location, 
@@ -176,7 +170,7 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
           
-          {companyId && companyDoc && (
+          {companyDoc && (
             <Card>
               <CardHeader>
                 <CardTitle>Company Details</CardTitle>
