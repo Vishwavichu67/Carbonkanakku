@@ -51,7 +51,7 @@ const CustomLogo = ({ className }: { className?: string }) => (
 export function Logo() {
   return (
     <div className="flex items-center gap-2">
-      <CustomLogo className="h-6 w-10 text-primary" />
+      <CustomLogo className="h-6 w-auto text-primary" />
       <span className="font-headline font-bold text-lg text-primary">{siteConfig.name}</span>
     </div>
   );
