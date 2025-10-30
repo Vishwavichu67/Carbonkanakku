@@ -9,6 +9,17 @@ export function initializeFirebase(): {
   auth: Auth;
   firestore: Firestore;
 } {
+  // Check if all required environment variables are present
+  if (
+    !firebaseConfig.apiKey ||
+    !firebaseConfig.authDomain ||
+    !firebaseConfig.projectId
+  ) {
+    throw new Error(
+      'Missing Firebase configuration. Please check your .env file and ensure all NEXT_PUBLIC_FIREBASE_* variables are set.'
+    );
+  }
+  
   const apps = getApps();
   const app = apps.length > 0 ? apps[0] : initializeApp(firebaseConfig);
   const auth = getAuth(app);
