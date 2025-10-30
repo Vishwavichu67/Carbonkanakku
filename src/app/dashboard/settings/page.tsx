@@ -21,7 +21,7 @@ export default function SettingsPage() {
 
   const [companyId, setCompanyId] = useState<string | null>(null);
 
-  const userDocPath = useMemoFirebase(() => (user ? `users/${user.uid}` : null), [user]);
+  const userDocPath = user ? `users/${user.uid}` : null;
   const { data: userDoc, loading: userDocLoading } = useDoc<any>(userDocPath!);
 
   useEffect(() => {
@@ -30,7 +30,7 @@ export default function SettingsPage() {
     }
   }, [userDoc]);
 
-  const companyDocPath = useMemoFirebase(() => (companyId ? `companies/${companyId}` : null), [companyId]);
+  const companyDocPath = companyId ? `companies/${companyId}` : null;
   const { data: companyDoc, loading: companyDocLoading } = useDoc<any>(companyDocPath!);
   
   const [displayName, setDisplayName] = useState('');
@@ -88,7 +88,7 @@ export default function SettingsPage() {
       });
   };
 
-  const isLoading = userLoading || userDocLoading || companyDocLoading;
+  const isLoading = userLoading || userDocLoading || (userDoc?.companyId && companyDocLoading);
 
   return (
     <div className="space-y-8">
@@ -142,7 +142,7 @@ export default function SettingsPage() {
                 <div className="flex items-center space-x-4">
                     <Avatar className="h-16 w-16">
                         <AvatarImage src={user?.photoURL || ''} alt={displayName} />
-                        <AvatarFallback>{displayName.charAt(0).toUpperCase()}</AvatarFallback>
+                        <AvatarFallback>{displayName?.charAt(0).toUpperCase()}</AvatarFallback>
                     </Avatar>
                     <div className="text-sm">
                         <p className="font-medium">{user?.email}</p>
@@ -160,42 +160,44 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
           
-          <Card>
-            <CardHeader>
-              <CardTitle>Company Details</CardTitle>
-              <CardDescription>Manage your company's information on the platform.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleCompanyUpdate} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="companyName">Company Name</Label>
-                  <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="Your Company Ltd." />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
-                  <Input id="location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Tiruppur, Tamil Nadu" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="subdomain">Industry Subdomain</Label>
-                  <Select value={subdomain} onValueChange={setSubdomain}>
-                    <SelectTrigger id="subdomain">
-                      <SelectValue placeholder="Select your factory type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {subdomains.map((item) => (
-                        <SelectItem key={item.name} value={item.name}>
-                          {item.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex justify-end md:col-span-2">
-                  <Button type="submit">Save Company Details</Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+          {companyId && companyDoc && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Company Details</CardTitle>
+                <CardDescription>Manage your company's information on the platform.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleCompanyUpdate} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="companyName">Company Name</Label>
+                    <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="Your Company Ltd." />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="location">Location</Label>
+                    <Input id="location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Tiruppur, Tamil Nadu" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="subdomain">Industry Subdomain</Label>
+                    <Select value={subdomain} onValueChange={setSubdomain}>
+                      <SelectTrigger id="subdomain">
+                        <SelectValue placeholder="Select your factory type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {subdomains.map((item) => (
+                          <SelectItem key={item.name} value={item.name}>
+                            {item.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex justify-end md:col-span-2">
+                    <Button type="submit">Save Company Details</Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
     </div>

@@ -16,14 +16,17 @@ interface DocData<T> {
   error: FirestoreError | null;
 }
 
-export function useDoc<T>(path: string): DocData<T> {
+export function useDoc<T>(path: string | null): DocData<T> {
   const firestore = useFirestore();
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<FirestoreError | null>(null);
 
   useEffect(() => {
-    if (!firestore) return;
+    if (!firestore || !path) {
+      setLoading(false);
+      return;
+    };
     setLoading(true);
 
     const docRef = doc(firestore, path);
