@@ -58,6 +58,7 @@ export default function RegisterPage() {
                 ownerUid: user.uid,
                 companyName: formData.get('companyName') as string,
                 location: formData.get('location') as string,
+                subdomain: formData.get('subdomain') as string,
                 capacity: Number(formData.get('capacity')),
                 employees: Number(formData.get('employees')),
                 yearlyOutput: Number(formData.get('yearlyOutput')),
@@ -117,7 +118,7 @@ export default function RegisterPage() {
             <div className="mx-auto mb-4">
               <Logo />
             </div>
-            <CardTitle className="font-headline text-2xl">Join EcoTextile Insights</CardTitle>
+            <CardTitle className="font-headline text-2xl">Join CarbonKanakku</CardTitle>
             <CardDescription>Start your sustainability journey. Create an account and tell us about your factory.</CardDescription>
           </CardHeader>
           <CardContent>

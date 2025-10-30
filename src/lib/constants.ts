@@ -2,7 +2,7 @@ import { ChartPie, Factory, FileText, Gauge, LayoutDashboard, Settings, Users, D
 import type { LucideIcon } from 'lucide-react';
 
 export const siteConfig = {
-  name: "EcoTextile Insights",
+  name: "CarbonKanakku",
   description: "Empowering Textile Industries for a Greener Tomorrow.",
 };
 
