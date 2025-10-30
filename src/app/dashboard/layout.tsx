@@ -4,7 +4,6 @@ import {
   Sidebar,
   SidebarHeader,
   SidebarContent,
-  SidebarTrigger,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
@@ -12,9 +11,8 @@ import {
 } from "@/components/ui/sidebar";
 import { Logo } from "@/components/logo";
 import { dashboardNav } from "@/lib/constants";
-import { UserNav } from "@/components/user-nav";
-import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
+import { SiteHeader } from "@/components/site-header";
 
 export default function DashboardLayout({
   children,
@@ -65,17 +63,7 @@ export default function DashboardLayout({
           </SidebarFooter>
         </Sidebar>
         <main className="flex-1 flex flex-col">
-          <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-sm">
-            <div className="container flex h-16 items-center justify-between">
-              <div className="md:hidden">
-                <SidebarTrigger />
-              </div>
-              <div className="hidden md:block font-headline text-xl font-bold">
-                User Dashboard
-              </div>
-              <UserNav />
-            </div>
-          </header>
+          <SiteHeader />
           <div className="flex-1 overflow-y-auto bg-secondary/50">
             <div className="container py-8">{children}</div>
           </div>
