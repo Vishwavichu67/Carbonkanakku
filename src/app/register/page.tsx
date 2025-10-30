@@ -14,6 +14,7 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { SiteHeader } from '@/components/site-header';
 
 export default function RegisterPage() {
     const { toast } = useToast();
@@ -58,6 +59,7 @@ export default function RegisterPage() {
                 ownerUid: user.uid,
                 companyName: formData.get('companyName') as string,
                 location: formData.get('location') as string,
+                subdomain: formData.get('subdomain') as string,
                 capacity: Number(formData.get('capacity')),
                 employees: Number(formData.get('employees')),
                 yearlyOutput: Number(formData.get('yearlyOutput')),
@@ -110,95 +112,102 @@ export default function RegisterPage() {
     }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-secondary p-4">
-      <div className="w-full max-w-2xl">
-        <Card className="w-full">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4">
-              <Logo />
-            </div>
-            <CardTitle className="font-headline text-2xl">Join CarbonKanakku</CardTitle>
-            <CardDescription>Start your sustainability journey. Create an account and tell us about your factory.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isClient && (
-              <form onSubmit={handleSubmit} className="space-y-6" key={isClient ? 'client' : 'server'}>
-                <div className="space-y-4">
-                    <h3 className="text-lg font-medium font-headline">Account Credentials</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="email">Email</Label>
-                            <Input id="email" name="email" type="email" placeholder="name@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
-                        </div>
-                        <div className="space-y-2">
-                            {/* Spacer */}
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="password">Password</Label>
-                            <Input id="password" name="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="confirm-password">Confirm Password</Label>
-                            <Input id="confirm-password" type="password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
-                        </div>
+    <div className="flex flex-col min-h-screen">
+        <SiteHeader />
+        <main className="flex-grow flex items-center justify-center bg-secondary p-4">
+            <div className="w-full max-w-2xl">
+                <Card className="w-full">
+                <CardHeader className="text-center">
+                    <div className="mx-auto mb-4">
+                    <Logo />
                     </div>
-                </div>
+                    <CardTitle className="font-headline text-2xl">Join CarbonKanakku</CardTitle>
+                    <CardDescription>Start your sustainability journey. Create an account and tell us about your factory.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {isClient && (
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-medium font-headline">Account Credentials</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="email">Email</Label>
+                                    <Input id="email" name="email" type="email" placeholder="name@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    {/* Spacer */}
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="password">Password</Label>
+                                    <Input id="password" name="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="confirm-password">Confirm Password</Label>
+                                    <Input id="confirm-password" type="password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+                                </div>
+                            </div>
+                        </div>
 
-              <div className="space-y-4">
-                 <h3 className="text-lg font-medium font-headline">Company Information</h3>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="companyName">Company Name</Label>
-                        <Input id="companyName" name="companyName" placeholder="Your Company Ltd." required />
+                    <div className="space-y-4">
+                        <h3 className="text-lg font-medium font-headline">Company Information</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="companyName">Company Name</Label>
+                                <Input id="companyName" name="companyName" placeholder="Your Company Ltd." required />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="location">Location</Label>
+                                <Input id="location" name="location" placeholder="Tiruppur, Tamil Nadu" required />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="subdomain">Industry Subdomain</Label>
+                                <Input id="subdomain" name="subdomain" placeholder="e.g., Spinning Unit" required />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="capacity">Capacity (e.g., tons/year)</Label>
+                                <Input id="capacity" name="capacity" type="number" placeholder="1000" required />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="employees">Number of Employees</Label>
+                                <Input id="employees" name="employees" type="number" placeholder="250" required />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="yearlyOutput">Yearly Output (e.g., units)</Label>
+                                <Input id="yearlyOutput" name="yearlyOutput" type="number" placeholder="500000" required />
+                            </div>
+                            <div className="space-y-2 md:col-span-2">
+                                <Label htmlFor="compliance">Compliance Level</Label>
+                                <Select required name="compliance">
+                                <SelectTrigger id="compliance">
+                                    <SelectValue placeholder="Select compliance level" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="basic">Basic</SelectItem>
+                                    <SelectItem value="intermediate">Intermediate</SelectItem>
+                                    <SelectItem value="certified">Certified</SelectItem>
+                                </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
                     </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="location">Location</Label>
-                        <Input id="location" name="location" placeholder="Tiruppur, Tamil Nadu" required />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="capacity">Capacity (e.g., tons/year)</Label>
-                        <Input id="capacity" name="capacity" type="number" placeholder="1000" required />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="employees">Number of Employees</Label>
-                        <Input id="employees" name="employees" type="number" placeholder="250" required />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="yearlyOutput">Yearly Output (e.g., units)</Label>
-                        <Input id="yearlyOutput" name="yearlyOutput" type="number" placeholder="500000" required />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="compliance">Compliance Level</Label>
-                        <Select required name="compliance">
-                        <SelectTrigger id="compliance">
-                            <SelectValue placeholder="Select compliance level" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="basic">Basic</SelectItem>
-                            <SelectItem value="intermediate">Intermediate</SelectItem>
-                            <SelectItem value="certified">Certified</SelectItem>
-                        </SelectContent>
-                        </Select>
-                    </div>
-                 </div>
-              </div>
 
-              <div>
-                <Button type="submit" className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
-                  Create Account
-                </Button>
-              </div>
-            </form>
-            )}
-            <div className="mt-4 text-center text-sm">
-              Already have an account?{' '}
-              <Link href="/login" className="underline text-primary">
-                Log In
-              </Link>
+                    <div>
+                        <Button type="submit" className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
+                        Create Account
+                        </Button>
+                    </div>
+                    </form>
+                    )}
+                    <div className="mt-4 text-center text-sm">
+                    Already have an account?{' '}
+                    <Link href="/login" className="underline text-primary">
+                        Log In
+                    </Link>
+                    </div>
+                </CardContent>
+                </Card>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+        </main>
     </div>
   );
 }
