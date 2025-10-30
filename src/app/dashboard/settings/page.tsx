@@ -101,7 +101,7 @@ export default function SettingsPage() {
       });
   };
 
-  const isLoading = userLoading || userDocLoading || (userDoc && userDoc.companyId && companyDocLoading);
+  const isLoading = userLoading || userDocLoading || (userDoc?.companyId && companyDocLoading);
 
   if (isLoading) {
     return (
@@ -178,7 +178,7 @@ export default function SettingsPage() {
             </Card>
           )}
           
-          {companyDoc && (
+          {userDoc?.companyId && companyDoc && (
             <Card>
               <CardHeader>
                 <CardTitle>Company Details</CardTitle>
@@ -241,7 +241,21 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
           )}
+
+          {userDoc && !userDoc.companyId && !companyDocLoading && (
+             <Card>
+                <CardHeader>
+                    <CardTitle>Company Details</CardTitle>
+                    <CardDescription>It looks like you haven't finished registering your company.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-muted-foreground">Please complete your registration to access all features.</p>
+                </CardContent>
+             </Card>
+          )}
         </>
     </div>
   );
 }
+
+    
