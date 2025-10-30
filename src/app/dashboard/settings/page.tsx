@@ -19,11 +19,9 @@ export default function SettingsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  // Get user profile
   const userDocPath = user ? `users/${user.uid}` : null;
   const { data: userDoc, loading: userDocLoading } = useDoc<any>(userDocPath);
 
-  // Get company profile, which depends on user profile
   const companyDocPath = userDoc?.companyId ? `companies/${userDoc.companyId}` : null;
   const { data: companyDoc, loading: companyDocLoading } = useDoc<any>(companyDocPath);
   
@@ -38,9 +36,14 @@ export default function SettingsPage() {
 
 
   useEffect(() => {
-    if (user) {
-      setDisplayName(user.displayName || '');
+    if (userDoc && userDoc.displayName) {
+      setDisplayName(userDoc.displayName);
+    } else if (user && user.displayName) {
+      setDisplayName(user.displayName);
     }
+  }, [user, userDoc]);
+
+  useEffect(() => {
     if (companyDoc) {
       setCompanyName(companyDoc.companyName || '');
       setLocation(companyDoc.location || '');
@@ -50,7 +53,7 @@ export default function SettingsPage() {
       setYearlyOutput(companyDoc.yearlyOutput || '');
       setComplianceLevel(companyDoc.complianceLevel || '');
     }
-  }, [user, userDoc, companyDoc]);
+  }, [companyDoc]);
 
   const handleProfileUpdate = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -98,49 +101,52 @@ export default function SettingsPage() {
       });
   };
 
-  const isLoading = userLoading || userDocLoading || (userDoc?.companyId && companyDocLoading);
+  const isLoading = userLoading || userDocLoading || (userDoc && !companyDocPath) || (companyDocPath && companyDocLoading);
+
+  if (isLoading) {
+    return (
+        <div className="space-y-8">
+        <h1 className="text-3xl font-bold font-headline">Settings</h1>
+        <Card>
+            <CardHeader>
+                <Skeleton className="h-8 w-48" />
+                <Skeleton className="h-4 w-72" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="flex items-center space-x-4">
+                    <Skeleton className="h-16 w-16 rounded-full" />
+                    <div className="space-y-2">
+                       <Skeleton className="h-4 w-64" />
+                       <Skeleton className="h-4 w-48" />
+                    </div>
+                </div>
+                <Skeleton className="h-10 w-full" />
+                <div className="flex justify-end pt-2">
+                  <Skeleton className="h-10 w-24" />
+                </div>
+            </CardContent>
+        </Card>
+        <Card>
+            <CardHeader>
+                <Skeleton className="h-8 w-64" />
+                <Skeleton className="h-4 w-96" />
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                 <div className="flex justify-end pt-2">
+                  <Skeleton className="h-10 w-24" />
+                </div>
+            </CardContent>
+        </Card>
+    </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold font-headline">Settings</h1>
-
-      {isLoading ? (
-        <div className="space-y-8">
-            <Card>
-                <CardHeader>
-                    <Skeleton className="h-8 w-48" />
-                    <Skeleton className="h-4 w-72" />
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="flex items-center space-x-4">
-                        <Skeleton className="h-16 w-16 rounded-full" />
-                        <div className="space-y-2">
-                           <Skeleton className="h-4 w-64" />
-                           <Skeleton className="h-4 w-48" />
-                        </div>
-                    </div>
-                    <Skeleton className="h-10 w-full" />
-                    <div className="flex justify-end pt-2">
-                      <Skeleton className="h-10 w-24" />
-                    </div>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader>
-                    <Skeleton className="h-8 w-64" />
-                    <Skeleton className="h-4 w-96" />
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                     <div className="flex justify-end pt-2">
-                      <Skeleton className="h-10 w-24" />
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
-      ) : (
         <>
           {user && (
             <Card>
@@ -236,7 +242,6 @@ export default function SettingsPage() {
             </Card>
           )}
         </>
-      )}
     </div>
   );
 }
