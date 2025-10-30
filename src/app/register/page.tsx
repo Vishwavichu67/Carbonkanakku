@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
+import { Loader2 } from 'lucide-react';
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
@@ -24,6 +25,7 @@ export default function RegisterPage() {
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [isClient, setIsClient] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
@@ -36,6 +38,7 @@ export default function RegisterPage() {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setIsLoading(true);
 
     // Reset errors
     setEmailError('');
@@ -44,18 +47,22 @@ export default function RegisterPage() {
     // --- Form Validation ---
     if (password.length < 6) {
       setPasswordError('Password must be at least 6 characters long.');
+      setIsLoading(false);
       return;
     }
     if (password !== confirmPassword) {
       setPasswordError('Passwords do not match.');
+      setIsLoading(false);
       return;
     }
     if (!companyName.trim()) {
         toast({ variant: 'destructive', title: 'Company name is required.' });
+        setIsLoading(false);
         return;
     }
     if (!displayName.trim()) {
         toast({ variant: 'destructive', title: 'Your name is required.' });
+        setIsLoading(false);
         return;
     }
 
@@ -65,6 +72,7 @@ export default function RegisterPage() {
         title: 'Error',
         description: 'Firebase is not initialized correctly.',
       });
+      setIsLoading(false);
       return;
     }
 
@@ -81,7 +89,6 @@ export default function RegisterPage() {
         ownerUid: user.uid,
         companyName: companyName,
         createdAt: new Date(),
-        // Add other company fields from your requirements here if needed
         location: '',
         subdomain: '',
         capacity: 0,
@@ -101,11 +108,11 @@ export default function RegisterPage() {
 
       toast({
         title: 'Registration Successful!',
-        description: 'Your account has been created. Redirecting to login...',
+        description: 'Your account has been created. Redirecting to your dashboard...',
       });
 
-      // 5. Redirect to login page
-      router.push('/login');
+      // 5. Redirect to dashboard page
+      router.push('/dashboard');
 
     } catch (error: any) {
       if (error.code === 'auth/email-already-in-use') {
@@ -120,6 +127,8 @@ export default function RegisterPage() {
           description: error.message || 'An unexpected error occurred.',
         });
       }
+    } finally {
+        setIsLoading(false);
     }
   };
 
@@ -141,27 +150,28 @@ export default function RegisterPage() {
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="companyName">Company Name</Label>
-                    <Input id="companyName" type="text" placeholder="Your Company Ltd." required value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
+                    <Input id="companyName" type="text" placeholder="Your Company Ltd." required value={companyName} onChange={(e) => setCompanyName(e.target.value)} disabled={isLoading} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="displayName">Your Name</Label>
-                    <Input id="displayName" type="text" placeholder="John Doe" required value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+                    <Input id="displayName" type="text" placeholder="John Doe" required value={displayName} onChange={(e) => setDisplayName(e.target.value)} disabled={isLoading} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" placeholder="name@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
+                    <Input id="email" type="email" placeholder="name@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading} />
                     {emailError && <p className="text-sm font-medium text-destructive">{emailError}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
-                    <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+                    <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} disabled={isLoading} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="confirmPassword">Confirm Password</Label>
-                    <Input id="confirmPassword" type="password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+                    <Input id="confirmPassword" type="password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} />
                     {passwordError && <p className="text-sm font-medium text-destructive">{passwordError}</p>}
                   </div>
-                  <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
+                  <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={isLoading}>
+                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Register
                   </Button>
                 </form>
