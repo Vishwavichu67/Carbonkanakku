@@ -61,7 +61,7 @@ export default function DataInputPage() {
                       <Label htmlFor={input.name.toLowerCase().replace(/ /g, '-')}>
                         {input.name} <span className="text-muted-foreground">({input.unit})</span>
                       </Label>
-                      <Input id={input.name.toLowerCase().replace(/ /g, '-')} type={input.unit.includes('/') || isNaN(parseInt(input.unit, 10)) &amp;&amp; input.unit.length &gt; 3 ? 'text' : 'number'} required />
+                      <Input id={input.name.toLowerCase().replace(/ /g, '-')} type={input.unit.includes('/') || input.unit.length > 3 ? 'text' : 'number'} required />
                       <p className="text-xs text-muted-foreground">Emission Type: {input.emissionType}</p>
                     </div>
                   ))}
