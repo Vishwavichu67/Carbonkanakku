@@ -50,7 +50,7 @@ export default function SettingsPage() {
       setYearlyOutput(companyDoc.yearlyOutput || '');
       setComplianceLevel(companyDoc.complianceLevel || '');
     }
-  }, [user, companyDoc]);
+  }, [user, userDoc, companyDoc]);
 
   const handleProfileUpdate = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -142,33 +142,35 @@ export default function SettingsPage() {
         </div>
       ) : (
         <>
-          <Card>
-            <CardHeader>
-              <CardTitle>User Profile</CardTitle>
-              <CardDescription>Manage your personal account details.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleProfileUpdate} className="space-y-4">
-                <div className="flex items-center space-x-4">
-                    <Avatar className="h-16 w-16">
-                        <AvatarImage src={user?.photoURL || ''} alt={displayName} />
-                        <AvatarFallback>{displayName?.charAt(0).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <div className="text-sm">
-                        <p className="font-medium">{user?.email}</p>
-                        <p className="text-muted-foreground">This is the email associated with your account.</p>
-                    </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="displayName">Display Name</Label>
-                  <Input id="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Your Name" />
-                </div>
-                <div className="flex justify-end">
-                  <Button type="submit">Save Profile</Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+          {user && (
+            <Card>
+              <CardHeader>
+                <CardTitle>User Profile</CardTitle>
+                <CardDescription>Manage your personal account details.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleProfileUpdate} className="space-y-4">
+                  <div className="flex items-center space-x-4">
+                      <Avatar className="h-16 w-16">
+                          <AvatarImage src={user?.photoURL || ''} alt={displayName} />
+                          <AvatarFallback>{displayName?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      <div className="text-sm">
+                          <p className="font-medium">{user.email}</p>
+                          <p className="text-muted-foreground">This is the email associated with your account.</p>
+                      </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="displayName">Display Name</Label>
+                    <Input id="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Your Name" />
+                  </div>
+                  <div className="flex justify-end">
+                    <Button type="submit">Save Profile</Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          )}
           
           {companyDoc && (
             <Card>
