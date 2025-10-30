@@ -178,7 +178,7 @@ export default function SettingsPage() {
             </Card>
           )}
           
-          {userDoc?.companyId && companyDoc && (
+          {companyDoc && (
             <Card>
               <CardHeader>
                 <CardTitle>Company Details</CardTitle>
