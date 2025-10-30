@@ -59,7 +59,6 @@ export default function RegisterPage() {
                 ownerUid: user.uid,
                 companyName: formData.get('companyName') as string,
                 location: formData.get('location') as string,
-                subdomain: formData.get('subdomain') as string,
                 capacity: Number(formData.get('capacity')),
                 employees: Number(formData.get('employees')),
                 yearlyOutput: Number(formData.get('yearlyOutput')),
@@ -145,23 +144,6 @@ export default function RegisterPage() {
                         <Label htmlFor="location">Location</Label>
                         <Input id="location" name="location" placeholder="Tiruppur, Tamil Nadu" required />
                     </div>
-
-                    <div className="space-y-2 md:col-span-2">
-                        <Label htmlFor="subdomain">Industry Subdomain</Label>
-                        <Select required name="subdomain">
-                        <SelectTrigger id="subdomain">
-                            <SelectValue placeholder="Select your factory type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {subdomains.map((subdomain) => (
-                            <SelectItem key={subdomain.name} value={subdomain.name}>
-                                {subdomain.name}
-                            </SelectItem>
-                            ))}
-                        </SelectContent>
-                        </Select>
-                    </div>
-
                     <div className="space-y-2">
                         <Label htmlFor="capacity">Capacity (e.g., tons/year)</Label>
                         <Input id="capacity" name="capacity" type="number" placeholder="1000" required />
