@@ -65,6 +65,7 @@ export function SiteHeader() {
   const { user, loading } = useUser();
   const pathname = usePathname();
   const isDashboard = pathname.startsWith('/dashboard');
+  const isAuthPage = pathname === '/login' || pathname === '/register';
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -99,7 +100,7 @@ export function SiteHeader() {
               <Skeleton className="h-9 w-24" />
             ) : user ? (
               <UserNav />
-            ) : (
+            ) : !isAuthPage ? (
               <>
                 <Button variant="ghost" asChild>
                   <Link href="/login">Log In</Link>
@@ -108,7 +109,7 @@ export function SiteHeader() {
                   <Link href="/register">Register</Link>
                 </Button>
               </>
-            )}
+            ) : null}
           </nav>
         </div>
       </div>
