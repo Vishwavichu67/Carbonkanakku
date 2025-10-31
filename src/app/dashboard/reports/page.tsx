@@ -1,4 +1,3 @@
-
 'use client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { generateSustainabilityReport, GenerateSustainabilityReportOutput } from '@/ai/flows/generate-sustainability-report';
 import { read, utils } from 'xlsx';
 import jsPDF from 'jspdf';
-import { useUser } from '@/firebase';
+import { useUser, useDoc } from '@/firebase';
 
 export default function ReportsPage() {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -19,6 +18,8 @@ export default function ReportsPage() {
   const [report, setReport] = useState<GenerateSustainabilityReportOutput | null>(null);
   const { toast } = useToast();
   const { user } = useUser();
+  const userDocPath = user ? `users/${user.uid}` : null;
+  const { data: userDoc, loading: userDocLoading } = useDoc<any>(userDocPath);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
@@ -61,7 +62,7 @@ export default function ReportsPage() {
       const jsonData = utils.sheet_to_json(worksheet);
 
       const result = await generateSustainabilityReport({
-        companyName: "Uploaded Report",
+        companyName: userDoc?.companyName || "Your Company",
         excelData: JSON.stringify(jsonData),
       });
 
@@ -70,12 +71,12 @@ export default function ReportsPage() {
         title: 'Report Generated Successfully!',
         description: 'Your new sustainability report is now available below.',
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Report generation failed:', error);
       toast({
         variant: 'destructive',
         title: 'Report Generation Failed',
-        description: 'An error occurred while analyzing your data.',
+        description: error.message || 'An error occurred while analyzing your data.',
       });
     } finally {
       setIsGenerating(false);
@@ -89,7 +90,7 @@ export default function ReportsPage() {
     
     doc.html(report.reportHtml, {
       callback: function (doc) {
-        doc.save(`Sustainability-Report.pdf`);
+        doc.save(`Sustainability-Report-${userDoc?.companyName || 'report'}.pdf`);
       },
       x: 10,
       y: 10,
@@ -118,7 +119,7 @@ export default function ReportsPage() {
                   </div>
                   {fileName && <p className="text-sm text-muted-foreground">Selected file: {fileName}</p>}
                 </div>
-                <Button onClick={handleGenerateReport} disabled={isGenerating || !file} className="w-full">
+                <Button onClick={handleGenerateReport} disabled={isGenerating || !file || userDocLoading} className="w-full">
                   {isGenerating ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -184,46 +185,6 @@ export default function ReportsPage() {
           </CardContent>
         </Card>
       )}
-
-       <Card>
-        <CardHeader>
-          <CardTitle className="font-headline">Past Reports</CardTitle>
-          <CardDescription>Access and download previously generated reports.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            <div className="border rounded-lg">
-                <ul className="divide-y">
-                    <li className="p-4 flex justify-between items-center">
-                        <div>
-                            <p className="font-semibold">Monthly Report - May 2024</p>
-                            <p className="text-sm text-muted-foreground">Generated on: June 1, 2024</p>
-                        </div>
-                        <Button variant="ghost" size="icon">
-                            <Download className="w-5 h-5" />
-                        </Button>
-                    </li>
-                    <li className="p-4 flex justify-between items-center">
-                        <div>
-                            <p className="font-semibold">Quarterly Report - Q1 2024</p>
-                            <p className="text-sm text-muted-foreground">Generated on: April 5, 2024</p>
-                        </div>
-                        <Button variant="ghost" size="icon">
-                            <Download className="w-5 h-5" />
-                        </Button>
-                    </li>
-                     <li className="p-4 flex justify-between items-center">
-                        <div>
-                            <p className="font-semibold">Annual Report - 2023</p>
-                            <p className="text-sm text-muted-foreground">Generated on: Jan 15, 2024</p>
-                        </div>
-                        <Button variant="ghost" size="icon">
-                            <Download className="w-5 h-5" />
-                        </Button>
-                    </li>
-                </ul>
-            </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

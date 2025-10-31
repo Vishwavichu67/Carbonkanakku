@@ -10,17 +10,86 @@ import {
   Tooltip,
   Legend
 } from 'recharts';
-
-const trendData = [
-  { name: 'Jan', electricity: 4000, water: 2400, waste: 240 },
-  { name: 'Feb', electricity: 3000, water: 1398, waste: 221 },
-  { name: 'Mar', electricity: 2000, water: 9800, waste: 229 },
-  { name: 'Apr', electricity: 2780, water: 3908, waste: 200 },
-  { name: 'May', electricity: 1890, water: 4800, waste: 218 },
-  { name: 'Jun', electricity: 2390, water: 3800, waste: 250 },
-];
+import { useUser, useDoc, useCollection } from "@/firebase";
+import { useMemo } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function AnalysisPage() {
+  const { user } = useUser();
+  const userDocPath = user ? `users/${user.uid}` : null;
+  const { data: userDoc } = useDoc<any>(userDocPath);
+  
+  const companyDataPath = userDoc?.companyId ? `companies/${userDoc.companyId}/data` : null;
+  const { data: companyData, loading: companyDataLoading } = useCollection<any>(companyDataPath || '', { orderBy: 'createdAt', limit: 12 });
+
+  const { trendData, benchmarkComparison } = useMemo(() => {
+    if (!companyData || companyData.length === 0) {
+      return { trendData: [], benchmarkComparison: 0 };
+    }
+
+    const sortedData = [...companyData].sort((a, b) => a.createdAt.seconds - b.createdAt.seconds);
+
+    const trendData = sortedData.map(entry => {
+      const electricity = entry.data['electricity-usage'] || 0;
+      const water = entry.data['water-used'] || 0;
+      const waste = entry.data['fabric-waste'] || 0;
+      
+      return {
+        name: new Date(entry.createdAt.seconds * 1000).toLocaleString('default', { month: 'short' }),
+        electricity,
+        water,
+        waste
+      };
+    });
+
+    const latestEntry = sortedData[sortedData.length - 1];
+    const latestElectricity = latestEntry.data['electricity-usage'] || 0;
+    const latestDiesel = latestEntry.data['diesel-usage'] || 0;
+    const latestCoal = latestEntry.data['coal-usage'] || 0;
+    const yourCO2 = ((latestElectricity * 0.82 + latestDiesel * 2.68 + latestCoal * 2420) * 12) / 1000;
+    const industryAverage = 15.2 * 100; // Example average
+    const benchmarkComparison = ((yourCO2 / industryAverage) * 100) - 100;
+
+    return { trendData, benchmarkComparison };
+  }, [companyData]);
+
+  if (companyDataLoading) {
+      return (
+        <div className="space-y-6">
+            <Skeleton className="h-10 w-96" />
+            <Card>
+                <CardHeader>
+                    <Skeleton className="h-8 w-64" />
+                    <Skeleton className="h-4 w-72" />
+                </CardHeader>
+                <CardContent>
+                    <Skeleton className="h-[350px] w-full" />
+                </CardContent>
+            </Card>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                    <CardHeader>
+                         <Skeleton className="h-8 w-56" />
+                         <Skeleton className="h-4 w-64" />
+                    </CardHeader>
+                    <CardContent>
+                        <Skeleton className="h-24 w-full" />
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                         <Skeleton className="h-8 w-48" />
+                         <Skeleton className="h-4 w-72" />
+                    </CardHeader>
+                    <CardContent>
+                        <Skeleton className="h-24 w-full" />
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
+      )
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold font-headline">Data Analysis &amp; Visualization</h1>
@@ -34,23 +103,29 @@ export default function AnalysisPage() {
           <CardDescription>A detailed look at your resource consumption and emissions over time.</CardDescription>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={350}>
-            <LineChart data={trendData}>
-              <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-              <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-              <Tooltip
-                contentStyle={{
-                  background: "hsl(var(--background))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "var(--radius)",
-                }}
-              />
-              <Legend wrapperStyle={{ fontSize: "14px" }}/>
-              <Line type="monotone" dataKey="electricity" stroke="hsl(var(--chart-1))" strokeWidth={2} name="Electricity (kWh)" />
-              <Line type="monotone" dataKey="water" stroke="hsl(var(--chart-2))" strokeWidth={2} name="Water (Liters)" />
-              <Line type="monotone" dataKey="waste" stroke="hsl(var(--chart-3))" strokeWidth={2} name="Waste (kg)" />
-            </LineChart>
-          </ResponsiveContainer>
+          {trendData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={350}>
+              <LineChart data={trendData}>
+                <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <Tooltip
+                  contentStyle={{
+                    background: "hsl(var(--background))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "var(--radius)",
+                  }}
+                />
+                <Legend wrapperStyle={{ fontSize: "14px" }}/>
+                <Line type="monotone" dataKey="electricity" stroke="hsl(var(--chart-1))" strokeWidth={2} name="Electricity (kWh)" />
+                <Line type="monotone" dataKey="water" stroke="hsl(var(--chart-2))" strokeWidth={2} name="Water (Liters)" />
+                <Line type="monotone" dataKey="waste" stroke="hsl(var(--chart-3))" strokeWidth={2} name="Waste (kg)" />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[350px] flex items-center justify-center text-muted-foreground">
+                <p>Submit data to see your emission trends.</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -64,7 +139,11 @@ export default function AnalysisPage() {
             <CardDescription>Your performance against industry averages.</CardDescription>
           </CardHeader>
           <CardContent>
-            <p>Your unit emits <span className="text-destructive font-bold">18% more CO₂</span> than the Tiruppur average for spinning units.</p>
+            {companyData.length > 0 ? (
+                <p>Your unit emits <span className="text-destructive font-bold">{benchmarkComparison.toFixed(0)}% more CO₂</span> than the Tiruppur average for spinning units.</p>
+            ) : (
+                <p className="text-muted-foreground">Submit data to see your industry benchmark.</p>
+            )}
             <div className="h-48 flex items-center justify-center text-muted-foreground">
                 [Detailed Benchmark Chart]
             </div>

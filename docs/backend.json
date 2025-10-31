@@ -63,6 +63,27 @@
         }
       },
       "required": ["ownerUid", "companyName", "location", "subdomain"]
+    },
+    "CompanyData": {
+      "title": "Company Data",
+      "description": "Stores periodic data submissions for a company.",
+      "type": "object",
+      "properties": {
+        "companyId": {
+          "type": "string"
+        },
+        "subdomain": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "data": {
+          "type": "object"
+        }
+      },
+      "required": ["companyId", "subdomain", "createdAt", "data"]
     }
   },
   "auth": {
@@ -80,6 +101,12 @@
         "$ref": "#/entities/Company"
       },
       "description": "Stores company profile information."
+    },
+    "/companies/{companyId}/data/{dataId}": {
+      "schema": {
+        "$ref": "#/entities/CompanyData"
+      },
+      "description": "Stores periodic data submissions for a company."
     }
   }
 }
