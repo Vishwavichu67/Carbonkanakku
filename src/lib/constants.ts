@@ -1,4 +1,4 @@
-import { ChartPie, Factory, FileText, Gauge, LayoutDashboard, Settings, Users, Droplets, Leaf, Zap, Fan, LayoutGrid, Shirt, PaintBucket, Truck, Recycle, Award, Library, MessageSquare } from 'lucide-react';
+import { ChartPie, Factory, FileText, Gauge, LayoutDashboard, Settings, Users, Droplets, Leaf, Zap, Fan, LayoutGrid, Shirt, PaintBucket, Truck, Recycle, Award, Library, MessageSquare, BrainCircuit } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export const siteConfig = {
@@ -9,7 +9,7 @@ export const siteConfig = {
 export const mainNav = [
   { title: "Dashboard", href: "/dashboard" },
   { title: "Hub", href: "/hub" },
-  { title: "Community", href: "/community" },
+  { title: "About Us", href: "/community" },
 ];
 
 export const dashboardNav = [
@@ -134,9 +134,10 @@ export const newsFeed = [
 
 export const hubTabs = [
     { value: 'news', label: 'ESG News', icon: FileText },
-    { value: 'innovations', label: 'Textile Innovations', icon: Zap },
-    { value: 'regulations', label: 'Govt Regulations', icon: Library },
+    { value: 'innovations', label: 'Innovations', icon: Zap },
+    { value: 'regulations', label: 'Regulations', icon: Library },
     { value: 'policy', label: 'Carbon Policy', icon: Leaf },
+    { value: 'summarizer', label: 'AI Summarizer', icon: BrainCircuit },
 ]
 
 export const caseStudies = [
@@ -158,4 +159,27 @@ export const caseStudies = [
         summary: 'From farm to fashion, Pratibha Syntex has integrated circular principles, turning waste into value and empowering local communities.',
         image: 'case-study-3',
     }
+]
+
+export const regulations = [
+    {
+        title: "Business Responsibility and Sustainability Reporting (BRSR)",
+        description: "Mandated by SEBI for the top 1000 listed companies, this framework requires detailed disclosures on Environmental, Social, and Governance (ESG) performance, pushing for greater transparency."
+    },
+    {
+        title: "Water (Prevention and Control of Pollution) Act, 1974",
+        description: "A foundational law that governs water pollution. For textile units, especially dyeing and processing, this mandates the treatment of effluents to meet standards set by the Central and State Pollution Control Boards (CPCB & SPCB)."
+    },
+    {
+        title: "Air (Prevention and Control of Pollution) Act, 1981",
+        description: "Regulates air emissions from industrial plants. Textile mills must monitor and control emissions from boilers, generators, and other machinery to comply with national air quality standards."
+    },
+    {
+        title: "Perform, Achieve and Trade (PAT) Scheme",
+        description: "A market-based mechanism under the National Mission for Enhanced Energy Efficiency (NMEEE) that applies to energy-intensive textile units. It sets energy reduction targets and allows for the trading of energy-saving certificates."
+    },
+    {
+        title: "Hazardous and Other Wastes (Management and Transboundary Movement) Rules, 2016",
+        description: "Governs the handling and disposal of hazardous waste, including chemical sludge from dyeing and processing units, ensuring environmentally safe management."
+    },
 ]

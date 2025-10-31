@@ -3,7 +3,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { caseStudies, hubTabs, newsFeed } from "@/lib/constants";
+import { caseStudies, hubTabs, newsFeed, regulations } from "@/lib/constants";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Button } from "@/components/ui/button";
@@ -62,7 +62,7 @@ export default function HubPage() {
 
           <Tabs defaultValue="regulations" className="w-full">
             <div className="flex justify-center mb-8">
-              <TabsList className="grid w-full max-w-2xl grid-cols-2 md:grid-cols-4">
+              <TabsList className="grid w-full max-w-3xl grid-cols-2 md:grid-cols-5">
                 {hubTabs.map(tab => (
                     <TabsTrigger key={tab.value} value={tab.value}>
                         <tab.icon className="w-4 h-4 mr-2" />
@@ -114,6 +114,23 @@ export default function HubPage() {
             </TabsContent>
 
             <TabsContent value="regulations">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="font-headline">Key Indian Environmental & ESG Regulations</CardTitle>
+                        <CardDescription>An overview of major compliance frameworks impacting the Indian textile industry.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        {regulations.map(reg => (
+                            <div key={reg.title} className="p-4 rounded-lg border bg-background">
+                                <h3 className="font-semibold text-primary font-headline">{reg.title}</h3>
+                                <p className="text-sm text-muted-foreground mt-1">{reg.description}</p>
+                            </div>
+                        ))}
+                    </CardContent>
+                </Card>
+            </TabsContent>
+            
+            <TabsContent value="summarizer">
               <div className="grid lg:grid-cols-5 gap-8">
                 <div className="lg:col-span-3">
                     <Card>
