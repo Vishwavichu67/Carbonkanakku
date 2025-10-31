@@ -2,7 +2,7 @@
 'use client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, FileUp, Star, Award, Loader2, FileText } from 'lucide-react';
+import { Download, FileUp, Star, Award, Loader2, FileText, AlertTriangle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useState } from 'react';
@@ -11,6 +11,7 @@ import { generateSustainabilityReport, GenerateSustainabilityReportOutput } from
 import { read, utils } from 'xlsx';
 import jsPDF from 'jspdf';
 import { useUser, useDoc } from '@/firebase';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ReportsPage() {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -19,8 +20,10 @@ export default function ReportsPage() {
   const [report, setReport] = useState<GenerateSustainabilityReportOutput | null>(null);
   const { toast } = useToast();
   const { user, loading: userLoading } = useUser();
+
   const userDocPath = user ? `users/${user.uid}` : null;
   const { data: userDoc, loading: userDocLoading } = useDoc<any>(userDocPath);
+
   const companyDocPath = userDoc?.companyId ? `companies/${userDoc.companyId}` : null;
   const { data: companyDoc, loading: companyDocLoading } = useDoc<any>(companyDocPath);
 
@@ -99,20 +102,20 @@ export default function ReportsPage() {
 
     const doc = new jsPDF();
     
-    // We need to tell jsPDF how to handle the HTML content
     doc.html(report.reportHtml, {
       callback: function (doc) {
         doc.save(`${companyDoc?.companyName || 'Sustainability'}-Report.pdf`);
       },
       x: 10,
       y: 10,
-      width: 180, // A4 width in mm is 210, leaving margins
-      windowWidth: 800 // The width of the 'virtual' browser window to render the HTML
+      width: 180,
+      windowWidth: 800
     });
   };
   
-  const isDataLoading = userLoading || userDocLoading || companyDocLoading;
-
+  const isDataLoading = userLoading || userDocLoading || (userDoc?.companyId && companyDocLoading);
+  const canGenerate = !isDataLoading && user && companyDoc;
+  
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold font-headline">AI-Powered Insights &amp; Reports</h1>
@@ -125,26 +128,45 @@ export default function ReportsPage() {
               <CardDescription>Upload an Excel sheet with your monthly data to generate a new AI-powered sustainability report.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="report-file">Excel Data File (.xlsx)</Label>
-                  <div className="flex items-center gap-2">
-                    <Input id="report-file" type="file" onChange={handleFileChange} accept=".xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="flex-grow"/>
-                  </div>
-                  {fileName && <p className="text-sm text-muted-foreground">Selected file: {fileName}</p>}
+              {isDataLoading && (
+                 <div className="space-y-4">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
                 </div>
-                <Button onClick={handleGenerateReport} disabled={isGenerating || !file || isDataLoading} className="w-full">
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Analyzing Data...
-                    </>
-                  ) : (
-                    <>
-                     <FileUp className="mr-2 h-4 w-4" />
-                      Generate New Report
-                    </>
-                  )}
-                </Button>
+              )}
+              {!isDataLoading && !companyDoc && (
+                <div className="flex items-center gap-3 rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+                  <AlertTriangle className="h-5 w-5" />
+                  <div className="flex-1">
+                    <p className="font-semibold">Company profile not found.</p>
+                    <p>Please complete your company profile in Settings before generating a report.</p>
+                  </div>
+                </div>
+              )}
+              {canGenerate && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="report-file">Excel Data File (.xlsx)</Label>
+                    <div className="flex items-center gap-2">
+                      <Input id="report-file" type="file" onChange={handleFileChange} accept=".xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="flex-grow"/>
+                    </div>
+                    {fileName && <p className="text-sm text-muted-foreground">Selected file: {fileName}</p>}
+                  </div>
+                  <Button onClick={handleGenerateReport} disabled={isGenerating || !file} className="w-full">
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Analyzing Data...
+                      </>
+                    ) : (
+                      <>
+                       <FileUp className="mr-2 h-4 w-4" />
+                        Generate New Report
+                      </>
+                    )}
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -240,3 +262,5 @@ export default function ReportsPage() {
     </div>
   );
 }
+
+    
