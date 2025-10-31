@@ -24,31 +24,43 @@ const generateLocalReport = (excelData: any[], companyName: string): ReportOutpu
   const recommendations: string[] = [];
 
   // Assuming the first row of data is representative for the calculation
-  const data = excelData[0] || {};
+  const rawData = excelData[0] || {};
   
+  // Normalize keys to be lowercase to handle case-insensitivity
+  const data: { [key: string]: any } = {};
+  for (const key in rawData) {
+    if (Object.prototype.hasOwnProperty.call(rawData, key)) {
+      data[key.toLowerCase()] = rawData[key];
+    }
+  }
+
   const emissionSources = [
-    { key: 'Electricity usage', factor: 0.82, unit: 'kWh', threshold: 20000, recommendation: "High electricity usage detected. Consider upgrading to BEE 5-star rated motors or installing solar panels to reduce grid dependency." },
-    { key: 'Diesel usage', factor: 2.68, unit: 'litres', threshold: 1500, recommendation: "Diesel consumption is high. Explore using cleaner fuels like LPG or CNG for heating processes, or optimize boiler efficiency." },
-    { key: 'Coal usage', factor: 2420, unit: 'tons', threshold: 3, recommendation: "Coal is a major emission source. We strongly recommend switching to biomass or natural gas to significantly lower your carbon footprint." },
-    { key: 'LPG usage', factor: 1.51, unit: 'kg' },
-    { key: 'Transport distance', factor: 0.27, unit: 'km' },
-    { key: 'Water used', factor: 0.0003, unit: 'liters' },
-    { key: 'Fabric waste', factor: 0.5, unit: 'kg' }
+    { key: 'electricity usage', factor: 0.82, unit: 'kWh', threshold: 20000, recommendation: "High electricity usage detected. Consider upgrading to BEE 5-star rated motors or installing solar panels to reduce grid dependency." },
+    { key: 'diesel usage', factor: 2.68, unit: 'litres', threshold: 1500, recommendation: "Diesel consumption is high. Explore using cleaner fuels like LPG or CNG for heating processes, or optimize boiler efficiency." },
+    { key: 'coal usage', factor: 2420, unit: 'tons', threshold: 3, recommendation: "Coal is a major emission source. We strongly recommend switching to biomass or natural gas to significantly lower your carbon footprint." },
+    { key: 'lpg usage', factor: 1.51, unit: 'kg', displayName: 'LPG Usage' },
+    { key: 'transport distance', factor: 0.27, unit: 'km', displayName: 'Transport Distance' },
+    { key: 'water used', factor: 0.0003, unit: 'liters', displayName: 'Water Used' },
+    { key: 'fabric waste', factor: 0.5, unit: 'kg', displayName: 'Fabric Waste' }
   ];
 
   const reductionSources = [
-    { key: 'Recycled fabric waste', factor: -0.2, unit: 'kg' },
-    { key: 'Recycled water', factor: -0.0001, unit: 'liters' }
+    { key: 'recycled fabric waste', factor: -0.2, unit: 'kg', displayName: 'Recycled Fabric Waste' },
+    { key: 'recycled water', factor: -0.0001, unit: 'liters', displayName: 'Recycled Water' }
   ];
   
   let breakdownHtml = '';
+  
+  const toTitleCase = (str: string) => str.replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+
 
   emissionSources.forEach(source => {
     const value = parseFloat(data[source.key] || '0');
     if (value > 0) {
       const emission = value * source.factor;
       totalMonthlyKg += emission;
-      breakdownHtml += `<tr><td style="padding: 8px; border-bottom: 1px solid #E9E7DA;">${source.key}</td><td style="padding: 8px; border-bottom: 1px solid #E9E7DA;">${value.toLocaleString()} ${source.unit}</td><td style="padding: 8px; border-bottom: 1px solid #E9E7DA; text-align: right;">${emission.toFixed(2)} kg CO₂e</td></tr>`;
+      const displayName = source.displayName || toTitleCase(source.key);
+      breakdownHtml += `<tr><td style="padding: 8px; border-bottom: 1px solid #E9E7DA;">${displayName}</td><td style="padding: 8px; border-bottom: 1px solid #E9E7DA;">${value.toLocaleString()} ${source.unit}</td><td style="padding: 8px; border-bottom: 1px solid #E9E7DA; text-align: right;">${emission.toFixed(2)} kg CO₂e</td></tr>`;
       if (source.threshold && value > source.threshold) {
         recommendations.push(source.recommendation);
       }
@@ -60,7 +72,8 @@ const generateLocalReport = (excelData: any[], companyName: string): ReportOutpu
       if (value > 0) {
         const reduction = value * source.factor;
         totalMonthlyKg += reduction;
-        breakdownHtml += `<tr><td style="padding: 8px; border-bottom: 1px solid #E9E7DA;">${source.key} (Credit)</td><td style="padding: 8px; border-bottom: 1px solid #E9E7DA;">${value.toLocaleString()} ${source.unit}</td><td style="padding: 8px; border-bottom: 1px solid #E9E7DA; text-align: right; color: green;">${reduction.toFixed(2)} kg CO₂e</td></tr>`;
+        const displayName = source.displayName || toTitleCase(source.key);
+        breakdownHtml += `<tr><td style="padding: 8px; border-bottom: 1px solid #E9E7DA;">${displayName} (Credit)</td><td style="padding: 8px; border-bottom: 1px solid #E9E7DA;">${value.toLocaleString()} ${source.unit}</td><td style="padding: 8px; border-bottom: 1px solid #E9E7DA; text-align: right; color: green;">${reduction.toFixed(2)} kg CO₂e</td></tr>`;
       }
   });
 
@@ -390,3 +403,5 @@ export default function ReportsPage() {
     </div>
   );
 }
+
+    
