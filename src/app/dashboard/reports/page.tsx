@@ -1,8 +1,55 @@
+
+'use client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, FilePlus, Star, Award } from 'lucide-react';
+import { Download, FileUp, Star, Award, Loader2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ReportsPage() {
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [fileName, setFileName] = useState('');
+  const { toast } = useToast();
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || file.name.endsWith('.xlsx')) {
+        setFileName(file.name);
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Invalid File Type',
+          description: 'Please upload a valid Excel file (.xlsx).',
+        });
+        event.target.value = ''; // Clear the input
+        setFileName('');
+      }
+    }
+  };
+
+  const handleGenerateReport = () => {
+    if (!fileName) {
+      toast({
+        variant: 'destructive',
+        title: 'No File Selected',
+        description: 'Please upload an Excel file to generate a report.',
+      });
+      return;
+    }
+    setIsGenerating(true);
+    // Simulate AI processing
+    setTimeout(() => {
+      setIsGenerating(false);
+      toast({
+        title: 'Report Generation Started',
+        description: 'Your new sustainability report will be available soon.',
+      });
+    }, 3000);
+  };
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold font-headline">AI-Powered Insights &amp; Reports</h1>
@@ -12,12 +59,29 @@ export default function ReportsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="font-headline">Generate Sustainability Report</CardTitle>
-              <CardDescription>Create a comprehensive, AI-generated sustainability report (PDF/HTML) suitable for stakeholders and ESG certifications.</CardDescription>
+              <CardDescription>Upload an Excel sheet with your monthly data to generate a new AI-powered sustainability report.</CardDescription>
             </CardHeader>
-            <CardContent className="text-center">
-              <FilePlus className="mx-auto h-24 w-24 text-muted-foreground/50 mb-4" />
-              <p className="text-sm text-muted-foreground mb-4">Click the button to generate a new report based on your latest data.</p>
-              <Button>Generate New Report</Button>
+            <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="report-file">Excel Data File (.xlsx)</Label>
+                  <div className="flex items-center gap-2">
+                    <Input id="report-file" type="file" onChange={handleFileChange} accept=".xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="flex-grow"/>
+                  </div>
+                  {fileName && <p className="text-sm text-muted-foreground">Selected file: {fileName}</p>}
+                </div>
+                <Button onClick={handleGenerateReport} disabled={isGenerating} className="w-full">
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Analyzing Data...
+                    </>
+                  ) : (
+                    <>
+                     <FileUp className="mr-2 h-4 w-4" />
+                      Generate New Report
+                    </>
+                  )}
+                </Button>
             </CardContent>
           </Card>
         </div>
