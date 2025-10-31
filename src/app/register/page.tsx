@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { Logo } from '@/components/logo';
 import { useState, useEffect } from 'react';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth, useFirestore, useUser } from '@/firebase';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { addDoc, collection, doc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -14,6 +14,9 @@ import { useRouter } from 'next/navigation';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
 import { Loader2 } from 'lucide-react';
+import { FirestorePermissionError } from '@/firebase/errors';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
@@ -22,29 +25,31 @@ export default function RegisterPage() {
   const [displayName, setDisplayName] = useState('');
   const [companyName, setCompanyName] = useState('');
   
-  const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
-  const [isClient, setIsClient] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
+  const [isCheckingUser, setIsCheckingUser] = useState(true);
 
   const auth = useAuth();
   const firestore = useFirestore();
   const { toast } = useToast();
   const router = useRouter();
+  const { user, loading: userLoading } = useUser();
+
+  useEffect(() => {
+    if (!userLoading) {
+      if (user) {
+        router.push('/dashboard');
+      } else {
+        setIsCheckingUser(false);
+      }
+    }
+  }, [user, userLoading, router]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsLoading(true);
-
-    // Reset errors
-    setEmailError('');
     setPasswordError('');
 
-    // --- Form Validation ---
     if (password.length < 6) {
       setPasswordError('Password must be at least 6 characters long.');
       setIsLoading(false);
@@ -55,39 +60,25 @@ export default function RegisterPage() {
       setIsLoading(false);
       return;
     }
-    if (!companyName.trim()) {
-        toast({ variant: 'destructive', title: 'Company name is required.' });
+    if (!companyName.trim() || !displayName.trim()) {
+        toast({ variant: 'destructive', title: 'All fields are required.' });
         setIsLoading(false);
         return;
     }
-    if (!displayName.trim()) {
-        toast({ variant: 'destructive', title: 'Your name is required.' });
-        setIsLoading(false);
-        return;
-    }
-
     if (!auth || !firestore) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Firebase is not initialized correctly.',
-      });
+      toast({ variant: 'destructive', title: 'Error', description: 'Firebase is not initialized.' });
       setIsLoading(false);
       return;
     }
 
     try {
-      // 1. Create user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      const createdUser = userCredential.user;
+      await updateProfile(createdUser, { displayName });
 
-      // 2. Update user's display name in Auth profile
-      await updateProfile(user, { displayName: displayName });
-
-      // 3. Create a new company document in Firestore
-      const companyRef = await addDoc(collection(firestore, 'companies'), {
-        ownerUid: user.uid,
-        companyName: companyName,
+      const companyData = {
+        ownerUid: createdUser.uid,
+        companyName,
         createdAt: new Date(),
         location: '',
         subdomain: '',
@@ -95,40 +86,46 @@ export default function RegisterPage() {
         employees: 0,
         yearlyOutput: 0,
         complianceLevel: 'basic',
-      });
-
-      // 4. Create a user profile document in Firestore
-      const userRef = doc(firestore, 'users', user.uid);
-      await setDoc(userRef, {
-        uid: user.uid,
-        email: user.email,
-        displayName: displayName,
-        companyId: companyRef.id,
-      });
-
-      toast({
-        title: 'Registration Successful!',
-        description: 'Your account has been created. Redirecting to your dashboard...',
-      });
-
-      // 5. Redirect to dashboard page
-      router.push('/dashboard');
-
-    } catch (error: any) {
-      if (error.code === 'auth/email-already-in-use') {
-        setEmailError('This email is already registered. Please log in.');
-      } else if (error.code === 'auth/weak-password') {
-        setPasswordError('Password is too weak. It should be at least 6 characters.');
-      } else {
-        console.error('Registration failed:', error);
-        toast({
-          variant: 'destructive',
-          title: 'Registration Failed',
-          description: error.message || 'An unexpected error occurred.',
+      };
+      const companyRef = await addDoc(collection(firestore, 'companies'), companyData).catch((serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: 'companies',
+            operation: 'create',
+            requestResourceData: companyData,
         });
+        errorEmitter.emit('permission-error', permissionError);
+        throw new Error('Failed to create company profile.');
+      });
+
+      const userData = {
+        uid: createdUser.uid,
+        email: createdUser.email,
+        displayName,
+        companyId: companyRef.id,
+      };
+      const userRef = doc(firestore, 'users', createdUser.uid);
+      await setDoc(userRef, userData).catch((serverError) => {
+          const permissionError = new FirestorePermissionError({
+              path: userRef.path,
+              operation: 'create',
+              requestResourceData: userData,
+          });
+          errorEmitter.emit('permission-error', permissionError);
+          throw new Error('Failed to create user profile.');
+      });
+
+      toast({ title: 'Registration Successful!', description: 'Redirecting to your dashboard...' });
+      router.push('/dashboard');
+    } catch (error: any) {
+      let errorMessage = error.message || 'An unexpected error occurred.';
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'This email is already registered. Please log in.';
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = 'Password is too weak. It should be at least 6 characters.';
       }
+      toast({ variant: 'destructive', title: 'Registration Failed', description: errorMessage });
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -137,53 +134,65 @@ export default function RegisterPage() {
       <SiteHeader />
       <main className="flex-grow flex items-center justify-center bg-secondary p-4">
         <div className="w-full max-w-md">
-          <Card>
-            <CardHeader className="text-center">
-              <div className="mx-auto mb-4">
-                <Logo />
-              </div>
-              <CardTitle className="font-headline text-2xl">Create an Account</CardTitle>
-              <CardDescription>Join to start tracking your company&apos;s ESG metrics.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isClient && (
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="companyName">Company Name</Label>
-                    <Input id="companyName" type="text" placeholder="Your Company Ltd." required value={companyName} onChange={(e) => setCompanyName(e.target.value)} disabled={isLoading} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="displayName">Your Name</Label>
-                    <Input id="displayName" type="text" placeholder="John Doe" required value={displayName} onChange={(e) => setDisplayName(e.target.value)} disabled={isLoading} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" placeholder="name@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading} />
-                    {emailError && <p className="text-sm font-medium text-destructive">{emailError}</p>}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} disabled={isLoading} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
-                    <Input id="confirmPassword" type="password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} />
-                    {passwordError && <p className="text-sm font-medium text-destructive">{passwordError}</p>}
-                  </div>
-                  <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={isLoading}>
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Register
-                  </Button>
-                </form>
-              )}
-              <div className="mt-4 text-center text-sm">
-                Already have an account?{' '}
-                <Link href="/login" className="underline text-primary">
-                  Log In
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
+            {isCheckingUser ? (
+                 <Card>
+                    <CardHeader>
+                        <Skeleton className="h-8 w-48 mx-auto" />
+                        <Skeleton className="h-4 w-72 mx-auto" />
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-10 w-full" />
+                    </CardContent>
+                 </Card>
+            ) : (
+                <Card>
+                    <CardHeader className="text-center">
+                    <div className="mx-auto mb-4">
+                        <Logo />
+                    </div>
+                    <CardTitle className="font-headline text-2xl">Create an Account</CardTitle>
+                    <CardDescription>Join to start tracking your company&apos;s ESG metrics.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div className="space-y-2">
+                            <Label htmlFor="companyName">Company Name</Label>
+                            <Input id="companyName" type="text" placeholder="Your Company Ltd." required value={companyName} onChange={(e) => setCompanyName(e.target.value)} disabled={isLoading} />
+                            </div>
+                            <div className="space-y-2">
+                            <Label htmlFor="displayName">Your Name</Label>
+                            <Input id="displayName" type="text" placeholder="John Doe" required value={displayName} onChange={(e) => setDisplayName(e.target.value)} disabled={isLoading} />
+                            </div>
+                            <div className="space-y-2">
+                            <Label htmlFor="email">Email</Label>
+                            <Input id="email" type="email" placeholder="name@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading} />
+                            </div>
+                            <div className="space-y-2">
+                            <Label htmlFor="password">Password</Label>
+                            <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} disabled={isLoading} />
+                            </div>
+                            <div className="space-y-2">
+                            <Label htmlFor="confirmPassword">Confirm Password</Label>
+                            <Input id="confirmPassword" type="password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} />
+                            {passwordError && <p className="text-sm font-medium text-destructive">{passwordError}</p>}
+                            </div>
+                            <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={isLoading}>
+                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Register
+                            </Button>
+                        </form>
+                        <div className="mt-4 text-center text-sm">
+                            Already have an account?{' '}
+                            <Link href="/login" className="underline text-primary">
+                            Log In
+                            </Link>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
         </div>
       </main>
       <SiteFooter />
