@@ -89,7 +89,7 @@ export default function DataInputPage() {
       <h1 className="text-3xl font-bold font-headline mb-6">Data Input Module</h1>
       <Card>
         <CardHeader>
-          <CardTitle>Submit Your Monthly Data</CardTitle>
+          <CardTitle>Submit Your Daily Data</CardTitle>
           <CardDescription>Select your subdomain to see the required input fields. Regular submissions improve the accuracy of your ESG insights.</CardDescription>
         </CardHeader>
         <CardContent>
