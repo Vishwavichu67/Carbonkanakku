@@ -39,9 +39,8 @@ const generateLocalReport = (excelData: any[], companyName: string): ReportOutpu
 
   const allKeys = [...emissionSources.map(s => s.key), ...reductionSources.map(s => s.key)];
   const totals: { [key: string]: number } = allKeys.reduce((acc, key) => ({ ...acc, [key]: 0 }), {});
-  const rowCount = excelData.length;
-
-  let useRandomData = rowCount === 0;
+  
+  let useRandomData = excelData.length === 0;
 
   if (!useRandomData) {
     excelData.forEach(row => {
@@ -58,8 +57,10 @@ const generateLocalReport = (excelData: any[], companyName: string): ReportOutpu
       useRandomData = true;
     }
   }
-  
+
+  const rowCount = excelData.length || 1;
   const averages: { [key: string]: number } = {};
+  
   if (!useRandomData) {
     for (const key in totals) {
       averages[key] = totals[key] / rowCount;
@@ -222,25 +223,19 @@ export default function ReportsPage() {
   };
 
   const handleGenerateReport = async () => {
-    if (!file) {
-      toast({
-        variant: 'destructive',
-        title: 'No File Selected',
-        description: 'Please upload an Excel file to generate a report.',
-      });
-      return;
-    }
-
     setIsGenerating(true);
     setReport(null);
 
     try {
       await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate processing time
-      const arrayBuffer = await file.arrayBuffer();
-      const workbook = read(arrayBuffer, { type: 'buffer' });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const jsonData = utils.sheet_to_json(worksheet, { defval: "" });
+      let jsonData: any[] = [];
+      if (file) {
+        const arrayBuffer = await file.arrayBuffer();
+        const workbook = read(arrayBuffer, { type: 'buffer' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        jsonData = utils.sheet_to_json(worksheet, { defval: "" });
+      }
       
       const result = generateLocalReport(jsonData, user?.displayName ? `${user.displayName}'s Factory` : "Your Company");
 
@@ -266,27 +261,25 @@ export default function ReportsPage() {
 
     const doc = new jsPDF({
       orientation: 'p',
-      unit: 'px',
+      unit: 'pt',
       format: 'a4',
     });
     
-    // It's important to load the fonts into jsPDF if you want to use them
-    // For this example, we'll rely on default fonts which may not match perfectly
     doc.html(report.reportHtml, {
       callback: function (doc) {
         doc.save(`Sustainability-Report-${user?.displayName || 'report'}.pdf`);
       },
-      x: 0,
-      y: 0,
-      width: 445,
-      windowWidth: 445
+      margin: [40, 40, 40, 40],
+      autoPaging: 'text',
+      width: 515, // A4 width in points (595) minus margins (40*2)
+      windowWidth: 1000, // Larger window width to help with scaling
     });
   };
   
   if (userLoading) {
       return (
           <div className="space-y-6">
-              <Skeleton className="h-10 w-96" />
+              <h1 className="text-3xl font-bold font-headline">AI-Powered Insights &amp; Reports</h1>
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2">
                     <Card>
@@ -311,7 +304,7 @@ export default function ReportsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="font-headline">Generate Sustainability Report</CardTitle>
-              <CardDescription>Upload an Excel sheet with your monthly data to generate a new AI-powered sustainability report.</CardDescription>
+              <CardDescription>Upload an Excel sheet with your monthly data to generate a new AI-powered sustainability report. If no file is uploaded, a sample report will be generated.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <>
@@ -322,7 +315,7 @@ export default function ReportsPage() {
                   </div>
                   {fileName && <p className="text-sm text-muted-foreground">Selected file: {fileName}</p>}
                 </div>
-                <Button onClick={handleGenerateReport} disabled={isGenerating || !file} className="w-full">
+                <Button onClick={handleGenerateReport} disabled={isGenerating} className="w-full">
                   {isGenerating ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
