@@ -43,73 +43,70 @@ const generateLocalReport = (excelData: any[], companyName: string): ReportOutpu
     { key: 'recycled water', factor: -0.0001, unit: 'liters', randomRange: [5000, 15000] }
   ];
 
-  const allKeys = [...emissionSources.map(s => s.key), ...reductionSources.map(s => s.key)];
-  const totals: { [key: string]: number } = allKeys.reduce((acc, key) => ({ ...acc, [key]: 0 }), {});
-  
   let useRandomData = excelData.length === 0;
 
-  if (!useRandomData) {
-    excelData.forEach(row => {
-      for (const key in totals) {
-        const rowKey = Object.keys(row).find(k => k.toLowerCase().trim() === key);
-        if (rowKey && row[rowKey]) {
-          totals[key] += parseFloat(row[rowKey]) || 0;
-        }
-      }
-    });
-
-    const totalSum = Object.values(totals).reduce((sum, val) => sum + val, 0);
-    if (totalSum === 0) {
-      useRandomData = true;
-    }
+  if (excelData.length > 0) {
+      let totalSum = 0;
+      excelData.forEach(row => {
+          for (const key in row) {
+              const cleanedKey = key.toLowerCase().trim();
+              const foundSource = [...emissionSources, ...reductionSources].find(s => s.key === cleanedKey);
+              if(foundSource && !isNaN(parseFloat(row[key]))) {
+                  totalSum += parseFloat(row[key]);
+              }
+          }
+      });
+      if (totalSum === 0) useRandomData = true;
   }
-
-  const rowCount = excelData.length || 1;
-  const averages: { [key: string]: number } = {};
   
+  let averageRow: { [key: string]: number } = {};
+
   if (!useRandomData) {
-    for (const key in totals) {
-      averages[key] = totals[key] / rowCount;
-    }
+      const totals: { [key: string]: number } = {};
+      const counts: { [key: string]: number } = {};
+      
+      excelData.forEach(row => {
+          for(const key in row) {
+              const cleanedKey = key.toLowerCase().trim();
+              if(!isNaN(parseFloat(row[key]))) {
+                  totals[cleanedKey] = (totals[cleanedKey] || 0) + parseFloat(row[key]);
+                  counts[cleanedKey] = (counts[cleanedKey] || 0) + 1;
+              }
+          }
+      });
+
+      for (const key in totals) {
+          if (counts[key] > 0) {
+              averageRow[key] = totals[key] / counts[key];
+          }
+      }
   }
 
   let breakdownHtml = '';
   
-  emissionSources.forEach(source => {
+  [...emissionSources, ...reductionSources].forEach(source => {
     let value = 0;
+    let isReduction = source.factor < 0;
+
     if (useRandomData && source.randomRange) {
         value = Math.floor(Math.random() * (source.randomRange[1] - source.randomRange[0]) + source.randomRange[0]);
-    } else {
-        value = averages[source.key] || 0;
+    } else if (averageRow[source.key]) {
+        value = averageRow[source.key];
     }
 
     if (value > 0) {
       const emission = value * source.factor;
       totalMonthlyKg += emission;
-      const displayName = toTitleCase(source.key.replace(/ usage| distance| used| waste/gi, ''));
-      breakdownHtml += `<tr><td style="padding: 8px; border-bottom: 1px solid #E9E7DA;">${displayName}</td><td style="padding: 8px; border-bottom: 1px solid #E9E7DA;">${value.toLocaleString(undefined, {maximumFractionDigits: 2})} ${source.unit}</td><td style="padding: 8px; border-bottom: 1px solid #E9E7DA; text-align: right;">${emission.toFixed(2)} kg CO₂e</td></tr>`;
+      let displayName = toTitleCase(source.key.replace(/ usage| distance| used| waste/gi, ''));
+      if(isReduction) displayName += " (Credit)";
+
+      breakdownHtml += `<tr><td style="padding: 8px; border-bottom: 1px solid #E9E7DA;">${displayName}</td><td style="padding: 8px; border-bottom: 1px solid #E9E7DA;">${value.toLocaleString(undefined, {maximumFractionDigits: 2})} ${source.unit}</td><td style="padding: 8px; border-bottom: 1px solid #E9E7DA; text-align: right; color: ${isReduction ? 'green' : 'inherit'};">${emission.toFixed(2)} kg CO₂e</td></tr>`;
       breakdown.push({ source: displayName, usage: `${value.toLocaleString(undefined, {maximumFractionDigits: 2})} ${source.unit}`, emission: `${emission.toFixed(2)} kg CO₂e` });
-      if (source.threshold && value > source.threshold && source.recommendation) {
+      
+      if (!isReduction && source.threshold && value > source.threshold && source.recommendation) {
         recommendations.push(source.recommendation);
       }
     }
-  });
-
-  reductionSources.forEach(source => {
-      let value = 0;
-      if (useRandomData && source.randomRange) {
-        value = Math.floor(Math.random() * (source.randomRange[1] - source.randomRange[0]) + source.randomRange[0]);
-      } else {
-        value = averages[source.key] || 0;
-      }
-
-      if (value > 0) {
-        const reduction = value * source.factor;
-        totalMonthlyKg += reduction;
-        const displayName = toTitleCase(source.key.replace(/ waste| water/gi, ''));
-        breakdownHtml += `<tr><td style="padding: 8px; border-bottom: 1px solid #E9E7DA;">${displayName} (Credit)</td><td style="padding: 8px; border-bottom: 1px solid #E9E7DA;">${value.toLocaleString(undefined, {maximumFractionDigits: 2})} ${source.unit}</td><td style="padding: 8px; border-bottom: 1px solid #E9E7DA; text-align: right; color: green;">${reduction.toFixed(2)} kg CO₂e</td></tr>`;
-        breakdown.push({ source: `${displayName} (Credit)`, usage: `${value.toLocaleString(undefined, {maximumFractionDigits: 2})} ${source.unit}`, emission: `${reduction.toFixed(2)} kg CO₂e` });
-      }
   });
   
   if (totalMonthlyKg === 0 && useRandomData) {
@@ -129,6 +126,8 @@ const generateLocalReport = (excelData: any[], companyName: string): ReportOutpu
     sustainabilityScore = "Compliant";
   }
   
+  const rowCount = useRandomData ? 'sample' : excelData.length;
+
   const scoreColor = sustainabilityScore === 'High Performer' ? '#22c55e' : (sustainabilityScore === 'Compliant' ? '#f97316' : '#ef4444');
 
   const reportHtml = `
@@ -152,7 +151,7 @@ const generateLocalReport = (excelData: any[], companyName: string): ReportOutpu
         <tr>
           <td style="width: 65%; background-color: #F8F7F4; border-radius: 8px; padding: 20px; vertical-align: top;">
             <h2 style="color: #3F704D; font-family: 'Space Grotesk', sans-serif; margin-top: 0; font-size: 18px;">Executive Summary</h2>
-            <p style="font-size: 14px; line-height: 1.6;">This report provides an analysis of your company's carbon footprint based on the average of ${rowCount > 0 && !useRandomData ? rowCount : 'sample'} data entries. The total estimated annual emission is <strong>${totalEmissions.toFixed(2)} tCO2e</strong>. This positions your operations in the <strong>'${sustainabilityScore}'</strong> category.</p>
+            <p style="font-size: 14px; line-height: 1.6;">This report provides an analysis of your company's carbon footprint based on the average of ${rowCount} data entries. The total estimated annual emission is <strong>${totalEmissions.toFixed(2)} tCO2e</strong>. This positions your operations in the <strong>'${sustainabilityScore}'</strong> category.</p>
           </td>
           <td style="width: 35%; padding-left: 20px; text-align: center; vertical-align: middle;">
             <div style="background-color: #fff; border: 1px solid ${scoreColor}; border-radius: 8px; padding: 15px;">
@@ -338,9 +337,9 @@ export default function ReportsPage() {
             currentY = data.cursor?.y || currentY;
         }
     });
+    // @ts-ignore
+    currentY = doc.lastAutoTable.finalY + 20;
 
-    currentY += 20; // Add space after table
-  
     // --- Recommendations ---
     if (currentY > pageHeight - 120) { // Check if new section fits
         doc.addPage();
