@@ -8,18 +8,18 @@ import { subdomains } from '@/lib/constants';
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { CheckCircle, Loader2 } from 'lucide-react';
-import { useUser, useFirestore, useDoc } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 
 type FormData = { [key: string]: string | number };
 
+const DEFAULT_COMPANY_ID = 'default-company';
+
 export default function DataInputPage() {
   const { user } = useUser();
   const firestore = useFirestore();
-  const userDocPath = user ? `users/${user.uid}` : null;
-  const { data: userDoc } = useDoc<any>(userDocPath);
 
   const [selectedSubdomain, setSelectedSubdomain] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>({});
@@ -42,11 +42,11 @@ export default function DataInputPage() {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!firestore || !userDoc?.companyId || !selectedSubdomain) {
+    if (!firestore || !selectedSubdomain) {
       toast({
         variant: 'destructive',
         title: 'Submission Failed',
-        description: 'Cannot submit data without company and subdomain selection.'
+        description: 'You must select a factory type before submitting data.'
       });
       return;
     }
@@ -54,13 +54,14 @@ export default function DataInputPage() {
     setIsSubmitting(true);
 
     const dataToSubmit = {
-      companyId: userDoc.companyId,
+      companyId: DEFAULT_COMPANY_ID,
       subdomain: selectedSubdomain,
       createdAt: serverTimestamp(),
       data: formData,
+      userId: user?.uid || 'anonymous',
     };
     
-    const collectionRef = collection(firestore, `companies/${userDoc.companyId}/data`);
+    const collectionRef = collection(firestore, `companies/${DEFAULT_COMPANY_ID}/data`);
     
     addDoc(collectionRef, dataToSubmit).then(() => {
         toast({

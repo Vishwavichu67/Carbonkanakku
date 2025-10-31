@@ -8,7 +8,7 @@ import { Logo } from '@/components/logo';
 import { useState, useEffect } from 'react';
 import { useAuth, useFirestore, useUser } from '@/firebase';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { addDoc, collection, doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { SiteHeader } from '@/components/site-header';
@@ -18,12 +18,13 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { Skeleton } from '@/components/ui/skeleton';
 
+const DEFAULT_COMPANY_ID = 'default-company';
+
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
-  const [companyName, setCompanyName] = useState('');
   
   const [passwordError, setPasswordError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -60,8 +61,8 @@ export default function RegisterPage() {
       setIsLoading(false);
       return;
     }
-    if (!companyName.trim() || !displayName.trim()) {
-        toast({ variant: 'destructive', title: 'All fields are required.' });
+    if (!displayName.trim()) {
+        toast({ variant: 'destructive', title: 'Your Name is required.' });
         setIsLoading(false);
         return;
     }
@@ -76,32 +77,11 @@ export default function RegisterPage() {
       const createdUser = userCredential.user;
       await updateProfile(createdUser, { displayName });
 
-      const companyData = {
-        ownerUid: createdUser.uid,
-        companyName,
-        createdAt: new Date(),
-        location: '',
-        subdomain: '',
-        capacity: 0,
-        employees: 0,
-        yearlyOutput: 0,
-        complianceLevel: 'basic',
-      };
-      const companyRef = await addDoc(collection(firestore, 'companies'), companyData).catch((serverError) => {
-        const permissionError = new FirestorePermissionError({
-            path: 'companies',
-            operation: 'create',
-            requestResourceData: companyData,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-        throw new Error('Failed to create company profile.');
-      });
-
       const userData = {
         uid: createdUser.uid,
         email: createdUser.email,
         displayName,
-        companyId: companyRef.id,
+        companyId: DEFAULT_COMPANY_ID,
       };
       const userRef = doc(firestore, 'users', createdUser.uid);
       await setDoc(userRef, userData).catch((serverError) => {
@@ -158,10 +138,6 @@ export default function RegisterPage() {
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleSubmit} className="space-y-4">
-                            <div className="space-y-2">
-                            <Label htmlFor="companyName">Company Name</Label>
-                            <Input id="companyName" type="text" placeholder="Your Company Ltd." required value={companyName} onChange={(e) => setCompanyName(e.target.value)} disabled={isLoading} />
-                            </div>
                             <div className="space-y-2">
                             <Label htmlFor="displayName">Your Name</Label>
                             <Input id="displayName" type="text" placeholder="John Doe" required value={displayName} onChange={(e) => setDisplayName(e.target.value)} disabled={isLoading} />
