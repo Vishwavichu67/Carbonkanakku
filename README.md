@@ -1,5 +1,5 @@
 # 🌿 CarbonKanakku - Your ESG Compliance Co-Pilot
-**LIVE LINK** - [https://carbon-kanakku-demo.firebaseapp.com/](https://carbon-kanakku-demo.firebaseapp.com/)
+**LIVE LINK** - [https://carbonkanakku.vercel.app/](https://carbonkanakku.vercel.app/)
 
 An AI-powered ESG platform designed for India's textile industry. CarbonKanakku empowers Small and Medium-sized Businesses (SMBs) to effortlessly track emissions, analyze their carbon footprint, ensure compliance, and generate professional sustainability reports, turning complex environmental data into actionable insights.
 
