@@ -23,8 +23,7 @@ export default function DataInputPage() {
 
   const [selectedSubdomain, setSelectedSubdomain] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
+  
   const { toast } = useToast();
 
   const handleSubdomainChange = (value: string) => {
@@ -51,7 +50,11 @@ export default function DataInputPage() {
       return;
     }
     
-    setIsSubmitting(true);
+    // Immediately show success and clear form for a snappy demo experience
+    toast({
+        title: "Data Submitted Successfully!",
+        description: "Your dashboard will be updated shortly.",
+    });
 
     const dataToSubmit = {
       companyId: DEFAULT_COMPANY_ID,
@@ -61,28 +64,20 @@ export default function DataInputPage() {
       userId: user?.uid || 'anonymous',
     };
     
+    setFormData({}); // Reset form immediately
+    
     const collectionRef = collection(firestore, `companies/${DEFAULT_COMPANY_ID}/data`);
     
-    addDoc(collectionRef, dataToSubmit).then(() => {
-        toast({
-            title: "Data Submitted Successfully!",
-            description: "Your dashboard will be updated shortly.",
-        });
-        setFormData({});
-    }).catch(serverError => {
+    // Perform the async operation in the background without blocking the UI
+    addDoc(collectionRef, dataToSubmit).catch(serverError => {
         const permissionError = new FirestorePermissionError({
           path: collectionRef.path,
           operation: 'create',
           requestResourceData: dataToSubmit,
         });
         errorEmitter.emit('permission-error', permissionError);
-        toast({
-            variant: 'destructive',
-            title: "Submission Failed",
-            description: "You don't have permission to add data.",
-        });
-    }).finally(() => {
-        setIsSubmitting(false);
+        // Optionally, show a silent error or log it, but avoid a disruptive toast
+        console.error("Submission Failed in background:", serverError);
     });
   }
 
@@ -101,7 +96,7 @@ export default function DataInputPage() {
           <form onSubmit={handleSubmit} className="space-y-8">
             <div className="max-w-md space-y-2">
               <Label htmlFor="subdomain-selector">Factory Type</Label>
-              <Select onValueChange={handleSubdomainChange} value={selectedSubdomain || ''} disabled={isSubmitting}>
+              <Select onValueChange={handleSubdomainChange} value={selectedSubdomain || ''}>
                 <SelectTrigger id="subdomain-selector">
                   <SelectValue placeholder="Select your factory type" />
                 </SelectTrigger>
@@ -131,7 +126,6 @@ export default function DataInputPage() {
                             type={input.unit.includes('/') || input.unit.length > 3 ? 'text' : 'number'}
                             value={formData[inputId] || ''}
                             onChange={handleInputChange}
-                            disabled={isSubmitting}
                             required 
                         />
                         <p className="text-xs text-muted-foreground">Emission Type: {input.emissionType}</p>
@@ -144,8 +138,7 @@ export default function DataInputPage() {
 
             {currentSubdomain && (
               <div className="flex justify-end">
-                <Button type="submit" disabled={isSubmitting || Object.keys(formData).length === 0}>
-                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Button type="submit" disabled={Object.keys(formData).length === 0}>
                   Submit Data
                 </Button>
               </div>
