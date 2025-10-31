@@ -1,3 +1,4 @@
+'use client';
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -8,11 +9,45 @@ import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { FileText } from "lucide-react";
+import { FileText, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { summarizeEsgMandates } from "@/ai/flows/summarize-esg-mandates";
+import { useToast } from "@/hooks/use-toast";
 
 const placeholderMandate = `The Securities and Exchange Board of India (SEBI) has introduced the Business Responsibility and Sustainability Reporting (BRSR) framework, which replaces the existing Business Responsibility Reporting (BRR). This new framework aims to establish more comprehensive and standardized disclosures on ESG (Environmental, Social, and Governance) parameters for listed companies. From the financial year 2022-2023, BRSR reporting is mandatory for the top 1000 listed companies by market capitalization. The BRSR framework is aligned with global reporting standards and is designed to provide greater transparency and accountability from companies on their sustainability performance. It covers nine principles of the National Guidelines on Responsible Business Conduct and requires companies to report on their performance against these principles.`;
 
 export default function HubPage() {
+  const [documentText, setDocumentText] = useState(placeholderMandate);
+  const [summary, setSummary] = useState("SEBI's new Business Responsibility and Sustainability Reporting (BRSR) framework is now mandatory for the top 1000 listed Indian companies by market cap, starting from FY 2022-23. It replaces the older BRR and requires more detailed and standardized ESG disclosures aligned with global standards.");
+  const [isSummarizing, setIsSummarizing] = useState(false);
+  const { toast } = useToast();
+
+  const handleSummarize = async () => {
+    if (!documentText.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Text is empty",
+        description: "Please paste some document text to summarize.",
+      });
+      return;
+    }
+    setIsSummarizing(true);
+    setSummary("");
+    try {
+      const result = await summarizeEsgMandates({ documentText });
+      setSummary(result.summary);
+    } catch (error) {
+      console.error("Summarization failed:", error);
+      toast({
+        variant: "destructive",
+        title: "Summarization Failed",
+        description: "An AI error occurred. Please try again.",
+      });
+    } finally {
+      setIsSummarizing(false);
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       <SiteHeader />
@@ -25,7 +60,7 @@ export default function HubPage() {
             </p>
           </div>
 
-          <Tabs defaultValue="news" className="w-full">
+          <Tabs defaultValue="regulations" className="w-full">
             <div className="flex justify-center mb-8">
               <TabsList className="grid w-full max-w-2xl grid-cols-2 md:grid-cols-4">
                 {hubTabs.map(tab => (
@@ -89,11 +124,10 @@ export default function HubPage() {
                         <CardContent className="space-y-4">
                             <div>
                                 <Label htmlFor="document-text">Document Text</Label>
-                                <Textarea id="document-text" rows={10} defaultValue={placeholderMandate} placeholder="Paste your document text here..." />
+                                <Textarea id="document-text" rows={10} value={documentText} onChange={e => setDocumentText(e.target.value)} placeholder="Paste your document text here..." />
                             </div>
-                            <Button className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
-                                <FileText className="w-4 h-4 mr-2"/>
-                                Summarize with AI
+                            <Button onClick={handleSummarize} disabled={isSummarizing} className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
+                                {isSummarizing ? <><Loader2 className="w-4 h-4 mr-2 animate-spin"/> Summarizing...</> : <><FileText className="w-4 h-4 mr-2"/> Summarize with AI</>}
                             </Button>
                         </CardContent>
                     </Card>
@@ -104,9 +138,7 @@ export default function HubPage() {
                              <CardTitle className="font-headline">Generated Summary</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-sm">
-                                SEBI's new Business Responsibility and Sustainability Reporting (BRSR) framework is now mandatory for the top 1000 listed Indian companies by market cap, starting from FY 2022-23. It replaces the older BRR and requires more detailed and standardized ESG disclosures aligned with global standards.
-                            </p>
+                            {isSummarizing ? <p className="text-sm text-muted-foreground">Generating summary...</p> : <p className="text-sm">{summary}</p>}
                         </CardContent>
                     </Card>
                  </div>
