@@ -49,7 +49,7 @@ const generateLocalReport = (excelData: any[], companyName: string): ReportOutpu
       let totalSum = 0;
       excelData.forEach(row => {
           for (const key in row) {
-              const cleanedKey = key.toLowerCase().trim();
+              const cleanedKey = String(key).toLowerCase().trim();
               const foundSource = [...emissionSources, ...reductionSources].find(s => s.key === cleanedKey);
               if(foundSource && !isNaN(parseFloat(row[key]))) {
                   totalSum += parseFloat(row[key]);
@@ -67,7 +67,7 @@ const generateLocalReport = (excelData: any[], companyName: string): ReportOutpu
       
       excelData.forEach(row => {
           for(const key in row) {
-              const cleanedKey = key.toLowerCase().trim();
+              const cleanedKey = String(key).toLowerCase().trim();
               if(!isNaN(parseFloat(row[key]))) {
                   totals[cleanedKey] = (totals[cleanedKey] || 0) + parseFloat(row[key]);
                   counts[cleanedKey] = (counts[cleanedKey] || 0) + 1;
@@ -90,8 +90,8 @@ const generateLocalReport = (excelData: any[], companyName: string): ReportOutpu
 
     if (useRandomData && source.randomRange) {
         value = Math.floor(Math.random() * (source.randomRange[1] - source.randomRange[0]) + source.randomRange[0]);
-    } else if (averageRow[source.key]) {
-        value = averageRow[source.key];
+    } else if (averageRow[source.key.toLowerCase().trim()]) {
+        value = averageRow[source.key.toLowerCase().trim()];
     }
 
     if (value > 0) {
@@ -110,11 +110,13 @@ const generateLocalReport = (excelData: any[], companyName: string): ReportOutpu
   });
   
   if (totalMonthlyKg === 0 && useRandomData) {
-    totalMonthlyKg = Math.random() * 20000 + 5000;
+    totalMonthlyKg = Math.random() * 30000 + 5000;
   }
 
   if (recommendations.length === 0) {
     recommendations.push("Your operations appear efficient based on the data. Continue monitoring and explore new green technologies to maintain high performance.");
+    recommendations.push("Invest in energy-efficient lighting (LEDs) across all units to reduce electricity consumption.");
+    recommendations.push("Implement a robust waste segregation system to maximize recycling and minimize landfill contributions.");
   }
 
   const totalEmissions = (totalMonthlyKg * 12) / 1000;
@@ -374,7 +376,7 @@ export default function ReportsPage() {
     });
   
     // --- Save the PDF ---
-    doc.save(`Sustainability-Report-${user?.displayName || 'report'}.pdf`);
+    doc.save(`Sustainability-Report-${user?.displayName?.replace(' ', '_') || 'report'}.pdf`);
   };
   
   if (userLoading) {
@@ -525,3 +527,5 @@ export default function ReportsPage() {
     </div>
   );
 }
+
+    
