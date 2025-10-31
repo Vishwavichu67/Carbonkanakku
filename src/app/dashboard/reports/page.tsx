@@ -22,15 +22,6 @@ const generateLocalReport = (excelData: any[], companyName: string): ReportOutpu
   let totalMonthlyKg = 0;
   const recommendations: string[] = [];
   
-  // Normalize keys to be lowercase to handle case-insensitivity
-  const rawData = excelData[0] || {};
-  const data: { [key: string]: any } = {};
-  for (const key in rawData) {
-    if (Object.prototype.hasOwnProperty.call(rawData, key)) {
-      data[key.toLowerCase().trim()] = rawData[key];
-    }
-  }
-
   const emissionSources = [
     { key: 'electricity usage', factor: 0.82, unit: 'kWh', threshold: 20000, recommendation: "High electricity usage detected. Consider upgrading to BEE 5-star rated motors or installing solar panels to reduce grid dependency.", randomRange: [15000, 25000] },
     { key: 'diesel usage', factor: 2.68, unit: 'litres', threshold: 1500, recommendation: "Diesel consumption is high. Explore using cleaner fuels like LPG or CNG for heating processes, or optimize boiler efficiency.", randomRange: [1000, 2000] },
@@ -45,25 +36,52 @@ const generateLocalReport = (excelData: any[], companyName: string): ReportOutpu
     { key: 'recycled fabric waste', factor: -0.2, unit: 'kg', randomRange: [20, 80] },
     { key: 'recycled water', factor: -0.0001, unit: 'liters', randomRange: [5000, 15000] }
   ];
-  
-  let breakdownHtml = '';
-  const useRandomData = Object.keys(data).length <= 1; // If only headers or empty, use random
 
+  const allKeys = [...emissionSources.map(s => s.key), ...reductionSources.map(s => s.key)];
+  const totals: { [key: string]: number } = allKeys.reduce((acc, key) => ({ ...acc, [key]: 0 }), {});
+  const rowCount = excelData.length;
+
+  let useRandomData = rowCount === 0;
+
+  if (!useRandomData) {
+    excelData.forEach(row => {
+      for (const key in totals) {
+        const rowKey = Object.keys(row).find(k => k.toLowerCase().trim() === key);
+        if (rowKey && row[rowKey]) {
+          totals[key] += parseFloat(row[rowKey]) || 0;
+        }
+      }
+    });
+
+    const totalSum = Object.values(totals).reduce((sum, val) => sum + val, 0);
+    if (totalSum === 0) {
+      useRandomData = true;
+    }
+  }
+  
+  const averages: { [key: string]: number } = {};
+  if (!useRandomData) {
+    for (const key in totals) {
+      averages[key] = totals[key] / rowCount;
+    }
+  }
+
+  let breakdownHtml = '';
   const toTitleCase = (str: string) => str.replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 
   emissionSources.forEach(source => {
     let value = 0;
-    if(useRandomData && source.randomRange) {
+    if (useRandomData && source.randomRange) {
         value = Math.floor(Math.random() * (source.randomRange[1] - source.randomRange[0]) + source.randomRange[0]);
     } else {
-        value = parseFloat(data[source.key] || '0');
+        value = averages[source.key] || 0;
     }
 
     if (value > 0) {
       const emission = value * source.factor;
       totalMonthlyKg += emission;
       const displayName = toTitleCase(source.key.replace(/ usage| distance| used| waste/gi, ''));
-      breakdownHtml += `<tr><td style="padding: 8px; border-bottom: 1px solid #E9E7DA;">${displayName}</td><td style="padding: 8px; border-bottom: 1px solid #E9E7DA;">${value.toLocaleString()} ${source.unit}</td><td style="padding: 8px; border-bottom: 1px solid #E9E7DA; text-align: right;">${emission.toFixed(2)} kg CO₂e</td></tr>`;
+      breakdownHtml += `<tr><td style="padding: 8px; border-bottom: 1px solid #E9E7DA;">${displayName}</td><td style="padding: 8px; border-bottom: 1px solid #E9E7DA;">${value.toLocaleString(undefined, {maximumFractionDigits: 2})} ${source.unit}</td><td style="padding: 8px; border-bottom: 1px solid #E9E7DA; text-align: right;">${emission.toFixed(2)} kg CO₂e</td></tr>`;
       if (source.threshold && value > source.threshold && source.recommendation) {
         recommendations.push(source.recommendation);
       }
@@ -72,30 +90,30 @@ const generateLocalReport = (excelData: any[], companyName: string): ReportOutpu
 
   reductionSources.forEach(source => {
       let value = 0;
-      if(useRandomData && source.randomRange) {
+      if (useRandomData && source.randomRange) {
         value = Math.floor(Math.random() * (source.randomRange[1] - source.randomRange[0]) + source.randomRange[0]);
       } else {
-        value = parseFloat(data[source.key] || '0');
+        value = averages[source.key] || 0;
       }
 
       if (value > 0) {
         const reduction = value * source.factor;
         totalMonthlyKg += reduction;
         const displayName = toTitleCase(source.key.replace(/ waste| water/gi, ''));
-        breakdownHtml += `<tr><td style="padding: 8px; border-bottom: 1px solid #E9E7DA;">${displayName} (Credit)</td><td style="padding: 8px; border-bottom: 1px solid #E9E7DA;">${value.toLocaleString()} ${source.unit}</td><td style="padding: 8px; border-bottom: 1px solid #E9E7DA; text-align: right; color: green;">${reduction.toFixed(2)} kg CO₂e</td></tr>`;
+        breakdownHtml += `<tr><td style="padding: 8px; border-bottom: 1px solid #E9E7DA;">${displayName} (Credit)</td><td style="padding: 8px; border-bottom: 1px solid #E9E7DA;">${value.toLocaleString(undefined, {maximumFractionDigits: 2})} ${source.unit}</td><td style="padding: 8px; border-bottom: 1px solid #E9E7DA; text-align: right; color: green;">${reduction.toFixed(2)} kg CO₂e</td></tr>`;
       }
   });
   
-  if (totalMonthlyKg === 0 && useRandomData) { // Final fallback if all randoms are 0
+  if (totalMonthlyKg === 0 && useRandomData) {
     totalMonthlyKg = Math.random() * 20000 + 5000;
   }
 
   if (recommendations.length === 0) {
-    recommendations.push("Your operations appear efficient. Continue monitoring and explore new green technologies to maintain high performance.");
+    recommendations.push("Your operations appear efficient based on the data. Continue monitoring and explore new green technologies to maintain high performance.");
   }
 
 
-  const totalEmissions = (totalMonthlyKg * 12) / 1000; // Total tCO2e per year
+  const totalEmissions = (totalMonthlyKg * 12) / 1000;
 
   let sustainabilityScore = "Needs Improvement";
   if (totalEmissions < 100) {
@@ -127,7 +145,7 @@ const generateLocalReport = (excelData: any[], companyName: string): ReportOutpu
         <tr>
           <td style="width: 65%; background-color: #F8F7F4; border-radius: 8px; padding: 20px; vertical-align: top;">
             <h2 style="color: #3F704D; font-family: 'Space Grotesk', sans-serif; margin-top: 0; font-size: 18px;">Executive Summary</h2>
-            <p style="font-size: 14px; line-height: 1.6;">This report provides an analysis of your company's carbon footprint based on the data provided. The total estimated annual emission is <strong>${totalEmissions.toFixed(2)} tCO2e</strong>. This positions your operations in the <strong>'${sustainabilityScore}'</strong> category, suggesting areas for strategic improvement.</p>
+            <p style="font-size: 14px; line-height: 1.6;">This report provides an analysis of your company's carbon footprint based on the average of ${rowCount > 0 ? rowCount : 'sample'} data entries. The total estimated annual emission is <strong>${totalEmissions.toFixed(2)} tCO2e</strong>. This positions your operations in the <strong>'${sustainabilityScore}'</strong> category.</p>
           </td>
           <td style="width: 35%; padding-left: 20px; text-align: center; vertical-align: middle;">
             <div style="background-color: #fff; border: 1px solid ${scoreColor}; border-radius: 8px; padding: 15px;">
@@ -138,19 +156,19 @@ const generateLocalReport = (excelData: any[], companyName: string): ReportOutpu
         </tr>
       </table>
       
-      <h3 style="color: #A07855; font-family: 'Space Grotesk', sans-serif; border-bottom: 1px solid #E9E7DA; padding-bottom: 5px; font-size: 16px;">Emission Breakdown (Monthly)</h3>
+      <h3 style="color: #A07855; font-family: 'Space Grotesk', sans-serif; border-bottom: 1px solid #E9E7DA; padding-bottom: 5px; font-size: 16px;">Average Monthly Emission Breakdown</h3>
       <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 14px;">
         <thead>
           <tr style="background-color: #F8F7F4; font-weight: bold;">
             <th style="padding: 10px; text-align: left;">Source</th>
-            <th style="padding: 10px; text-align: left;">Usage</th>
-            <th style="padding: 10px; text-align: right;">Emission (kg CO₂e)</th>
+            <th style="padding: 10px; text-align: left;">Avg. Usage</th>
+            <th style="padding: 10px; text-align: right;">Avg. Emission (kg CO₂e)</th>
           </tr>
         </thead>
         <tbody>
           ${breakdownHtml}
           <tr style="background-color: #F8F7F4; font-weight: bold;">
-            <td colSpan="2" style="padding: 10px; text-align: right;">Total Monthly Emissions</td>
+            <td colSpan="2" style="padding: 10px; text-align: right;">Total Average Monthly Emissions</td>
             <td style="padding: 10px; text-align: right;">${totalMonthlyKg.toFixed(2)} kg CO₂e</td>
           </tr>
         </tbody>
@@ -222,7 +240,7 @@ export default function ReportsPage() {
       const workbook = read(arrayBuffer, { type: 'buffer' });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
-      const jsonData = utils.sheet_to_json(worksheet);
+      const jsonData = utils.sheet_to_json(worksheet, { defval: "" });
       
       const result = generateLocalReport(jsonData, user?.displayName ? `${user.displayName}'s Factory` : "Your Company");
 
