@@ -2,36 +2,50 @@
 'use client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, FileUp, Star, Award, Loader2 } from 'lucide-react';
+import { Download, FileUp, Star, Award, Loader2, FileText } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { generateSustainabilityReport, GenerateSustainabilityReportOutput } from '@/ai/flows/generate-sustainability-report';
+import { read, utils } from 'xlsx';
+import jsPDF from 'jspdf';
+import { useUser, useDoc } from '@/firebase';
 
 export default function ReportsPage() {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState('');
+  const [report, setReport] = useState<GenerateSustainabilityReportOutput | null>(null);
   const { toast } = useToast();
+  const { user } = useUser();
+  const userDocPath = user ? `users/${user.uid}` : null;
+  const { data: userDoc } = useDoc<any>(userDocPath);
+  const companyDocPath = userDoc?.companyId ? `companies/${userDoc.companyId}` : null;
+  const { data: companyDoc } = useDoc<any>(companyDocPath);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || file.name.endsWith('.xlsx')) {
-        setFileName(file.name);
+    const selectedFile = event.target.files?.[0];
+    if (selectedFile) {
+      if (selectedFile.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || selectedFile.name.endsWith('.xlsx')) {
+        setFile(selectedFile);
+        setFileName(selectedFile.name);
+        setReport(null);
       } else {
         toast({
           variant: 'destructive',
           title: 'Invalid File Type',
           description: 'Please upload a valid Excel file (.xlsx).',
         });
-        event.target.value = ''; // Clear the input
+        event.target.value = '';
+        setFile(null);
         setFileName('');
       }
     }
   };
 
-  const handleGenerateReport = () => {
-    if (!fileName) {
+  const handleGenerateReport = async () => {
+    if (!file) {
       toast({
         variant: 'destructive',
         title: 'No File Selected',
@@ -39,15 +53,62 @@ export default function ReportsPage() {
       });
       return;
     }
-    setIsGenerating(true);
-    // Simulate AI processing
-    setTimeout(() => {
-      setIsGenerating(false);
+     if (!companyDoc) {
       toast({
-        title: 'Report Generation Started',
-        description: 'Your new sustainability report will be available soon.',
+        variant: 'destructive',
+        title: 'Company Not Found',
+        description: 'Could not find company details to generate the report.',
       });
-    }, 3000);
+      return;
+    }
+
+    setIsGenerating(true);
+    setReport(null);
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const workbook = read(arrayBuffer);
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData = utils.sheet_to_json(worksheet);
+
+      const result = await generateSustainabilityReport({
+        companyName: companyDoc.companyName,
+        excelData: JSON.stringify(jsonData),
+      });
+
+      setReport(result);
+      toast({
+        title: 'Report Generated Successfully!',
+        description: 'Your new sustainability report is now available below.',
+      });
+    } catch (error) {
+      console.error('Report generation failed:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Report Generation Failed',
+        description: 'An error occurred while analyzing your data.',
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleDownloadPdf = () => {
+    if (!report || !report.reportHtml) return;
+
+    const doc = new jsPDF();
+    
+    // We need to tell jsPDF how to handle the HTML content
+    doc.html(report.reportHtml, {
+      callback: function (doc) {
+        doc.save(`${companyDoc?.companyName || 'Sustainability'}-Report.pdf`);
+      },
+      x: 10,
+      y: 10,
+      width: 180, // A4 width in mm is 210, leaving margins
+      windowWidth: 800 // The width of the 'virtual' browser window to render the HTML
+    });
   };
 
   return (
@@ -69,7 +130,7 @@ export default function ReportsPage() {
                   </div>
                   {fileName && <p className="text-sm text-muted-foreground">Selected file: {fileName}</p>}
                 </div>
-                <Button onClick={handleGenerateReport} disabled={isGenerating} className="w-full">
+                <Button onClick={handleGenerateReport} disabled={isGenerating || !file} className="w-full">
                   {isGenerating ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -106,6 +167,34 @@ export default function ReportsPage() {
           </Card>
         </div>
       </div>
+      
+      {report && (
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle className="font-headline flex items-center gap-2">
+                  <FileText />
+                  Generated Report for {companyDoc?.companyName}
+                </CardTitle>
+                <CardDescription>
+                  Total Emissions: <span className="font-bold text-primary">{report.totalEmissions.toFixed(2)} tCO2e/year</span> | Score: <span className="font-bold text-primary">{report.sustainabilityScore}</span>
+                </CardDescription>
+              </div>
+              <Button onClick={handleDownloadPdf} variant="outline">
+                <Download className="mr-2 h-4 w-4" />
+                Download as PDF
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div 
+              className="prose prose-sm dark:prose-invert max-w-none border rounded-lg p-4 bg-background" 
+              dangerouslySetInnerHTML={{ __html: report.reportHtml }}
+            />
+          </CardContent>
+        </Card>
+      )}
 
        <Card>
         <CardHeader>
