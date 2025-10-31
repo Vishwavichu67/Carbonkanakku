@@ -8,11 +8,20 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  Legend
+  Legend,
+  Bar,
+  BarChart,
 } from 'recharts';
 import { useUser } from "@/firebase";
 import { useState, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+
+const benchmarkChartData = [
+    { name: 'Water Usage', your_unit: 1500, industry_avg: 1800 },
+    { name: 'Energy (kWh/ton)', your_unit: 850, industry_avg: 720 },
+    { name: 'Waste (kg/ton)', your_unit: 45, industry_avg: 60 },
+    { name: 'CO2e (t/year)', your_unit: 220, industry_avg: 190 },
+]
 
 export default function AnalysisPage() {
     const { user, loading: userLoading } = useUser();
@@ -123,9 +132,24 @@ export default function AnalysisPage() {
             <CardDescription>Your performance against industry averages.</CardDescription>
           </CardHeader>
           <CardContent>
-            <p>Your unit emits <span className="text-destructive font-bold">{benchmarkComparison.toFixed(0)}% more CO₂</span> than the Tiruppur average for spinning units.</p>
-            <div className="h-48 flex items-center justify-center text-muted-foreground">
-                [Detailed Benchmark Chart Placeholder]
+             <p>Your unit emits <span className="text-destructive font-bold">{Math.abs(benchmarkComparison).toFixed(0)}% {benchmarkComparison > 0 ? 'more' : 'less'} CO₂</span> than the Tiruppur average for spinning units.</p>
+            <div className="h-48 mt-4">
+              <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={benchmarkChartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                      <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false}/>
+                      <Tooltip 
+                        contentStyle={{
+                          background: "hsl(var(--background))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "var(--radius)",
+                        }}
+                      />
+                      <Legend wrapperStyle={{ fontSize: "14px" }}/>
+                      <Bar dataKey="your_unit" fill="hsl(var(--primary))" name="Your Unit" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="industry_avg" fill="hsl(var(--muted))" name="Industry Average" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
