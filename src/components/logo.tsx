@@ -6,8 +6,8 @@ const CustomLogo = ({ className }: { className?: string }) => (
     src="/icon.svg"
     alt={`${siteConfig.name} logo`}
     className={className}
-    width={80} 
-    height={24}
+    width={120} 
+    height={36}
     priority
   />
 );
@@ -15,8 +15,7 @@ const CustomLogo = ({ className }: { className?: string }) => (
 export function Logo() {
   return (
     <div className="flex items-center gap-2">
-      <CustomLogo className="h-6 w-auto text-primary" />
-      <span className="font-headline font-bold text-lg text-primary">{siteConfig.name}</span>
+      <CustomLogo className="h-9 w-auto text-primary" />
     </div>
   );
 }

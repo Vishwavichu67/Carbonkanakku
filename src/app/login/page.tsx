@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
+import { siteConfig } from '@/lib/constants';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -59,8 +60,9 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           <Card className="w-full">
             <CardHeader className="text-center">
-              <div className="mx-auto mb-4">
+              <div className="mx-auto mb-2 flex flex-col items-center">
                   <Logo />
+                  <p className="text-sm text-muted-foreground mt-2">{siteConfig.description}</p>
               </div>
               <CardTitle className="font-headline text-2xl">Welcome Back</CardTitle>
               <CardDescription>Enter your credentials to access your dashboard.</CardDescription>

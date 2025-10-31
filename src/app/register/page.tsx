@@ -17,6 +17,7 @@ import { Loader2 } from 'lucide-react';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { Skeleton } from '@/components/ui/skeleton';
+import { siteConfig } from '@/lib/constants';
 
 const DEFAULT_COMPANY_ID = 'default-company';
 
@@ -130,8 +131,9 @@ export default function RegisterPage() {
             ) : (
                 <Card>
                     <CardHeader className="text-center">
-                    <div className="mx-auto mb-4">
+                    <div className="mx-auto mb-2 flex flex-col items-center">
                         <Logo />
+                        <p className="text-sm text-muted-foreground mt-2">{siteConfig.description}</p>
                     </div>
                     <CardTitle className="font-headline text-2xl">Create an Account</CardTitle>
                     <CardDescription>Join to start tracking your company&apos;s ESG metrics.</CardDescription>
