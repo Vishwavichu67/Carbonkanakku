@@ -1,15 +1,14 @@
 'use server';
 
 /**
- * @fileOverview A sustainability report generation AI agent that analyzes textile data based on Indian emission rules.
+ * @fileOverview A sustainability report generation agent that analyzes textile data based on Indian emission rules.
  *
  * - generateSustainabilityReport - A function that handles the generation of sustainability reports.
  * - GenerateSustainabilityReportInput - The input type for the generateSustainabilityReport function.
  * - GenerateSustainabilityReportOutput - The return type for the generateSustainabilityReport function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { z } from 'zod';
 
 const GenerateSustainabilityReportInputSchema = z.object({
   companyName: z.string().describe("The name of the company."),
@@ -27,101 +26,125 @@ const GenerateSustainabilityReportOutputSchema = z.object({
 
 export type GenerateSustainabilityReportOutput = z.infer<typeof GenerateSustainabilityReportOutputSchema>;
 
-export async function generateSustainabilityReport(input: GenerateSustainabilityReportInput): Promise<GenerateSustainabilityReportOutput> {
-  return generateSustainabilityReportFlow(input);
+
+function getNumericValue(data: any, key: string, unit: string): number {
+    const record = data.find((d: any) => d.Parameter === key && d.Unit.toLowerCase().includes(unit.toLowerCase()));
+    const value = record ? record['Sample Value'] : 0;
+    return typeof value === 'number' ? value : 0;
 }
 
-const prompt = ai.definePrompt({
-  name: 'generateSustainabilityReportPrompt',
-  input: {schema: GenerateSustainabilityReportInputSchema},
-  output: {schema: GenerateSustainabilityReportOutputSchema},
-  prompt: `You are an expert ESG analyst for the Indian textile industry. Your task is to generate a detailed sustainability report based on the provided company data and a strict set of rules.
+export async function generateSustainabilityReport(input: GenerateSustainabilityReportInput): Promise<GenerateSustainabilityReportOutput> {
+    const data = JSON.parse(input.excelData);
 
-Company Name: {{{companyName}}}
-Data (from Excel):
-{{{excelData}}}
+    const electricityKwh = getNumericValue(data, 'Electricity usage', 'kwh');
+    const dieselLitres = getNumericValue(data, 'Diesel usage', 'litres');
+    const coalTons = getNumericValue(data, 'Coal usage', 'tons');
 
-**MANDATORY RULES & CALCULATIONS:**
-You must strictly follow these Indian textile industry emission rules. Do not use global or generic limits.
+    const emissionsElectricity = 0.82 * electricityKwh; // kg CO2e
+    const emissionsDiesel = 2.68 * dieselLitres; // kg CO2e
+    const emissionsCoal = 2420 * coalTons; // 2.42 kg/kg * 1000 kg/ton = 2420 kg CO2e per ton
 
-**1. Spinning Units (Yarn Production)**
-- Rules:
-  - Motors must be energy-efficient (BEE Star Rating 3+). Assume compliance if not specified.
-  - Emission Limit: 0.82 kg CO2 per kWh.
-  - Dust Particulate Limit: ≤ 150 mg/Nm3.
-- Calculation:
-  - E_spinning = Electricity (kWh) × 0.82
+    const totalMonthlyKg = emissionsElectricity + emissionsDiesel + emissionsCoal;
+    const totalYearlyTons = (totalMonthlyKg * 12) / 1000;
 
-**2. Dyeing and Finishing Units**
-- Rules:
-  - Boilers must meet CPCB limits (PM ≤ 150 mg/Nm3, SO2 ≤ 100 mg/Nm3).
-  - Effluent Discharge: < 100 mg/L COD and < 10 mg/L BOD.
-  - Zero Liquid Discharge (ZLD) is recommended.
-- Thermal Energy Factors:
-  - Diesel = 2.68 kg CO2 per unit
-  - Coal = 2.42 kg CO2 per unit
-- Calculation:
-  - E_dyeing = (Diesel_used × 2.68) + (Coal_used × 2.42) + (Electricity_kWh × 0.82)
+    let score = 'Needs Improvement';
+    let recommendations = [
+        'Investigate energy-efficient motors (BEE Star Rating 3+).',
+        'Explore using LPG instead of diesel for heating (1.51 kg CO2/kg).',
+        'Review water usage; aim for under 100 L/kg of fabric.',
+        'Implement a Zero Liquid Discharge (ZLD) system for effluent.'
+    ];
 
-**3. Finishing and Garmenting Units**
-- Rules:
-  - Prefer LPG over diesel (LPG factor = 1.51 kg CO2/kg).
-  - Recommend at least 10% renewable energy usage.
-- Calculation:
-  - E_finishing = (LPG_used × 1.51) + (Electricity_kWh × 0.82) - (Recycled_waste_kg × 0.2)
+    if (totalYearlyTons < 100) {
+        score = 'Good';
+        recommendations = [
+            'Explore renewable energy sources to further reduce your footprint.',
+            'Optimize transportation routes to reduce fuel consumption.',
+            'Increase usage of recycled water to over 30%.'
+        ];
+    } else if (totalYearlyTons < 250) {
+        score = 'Compliant';
+    }
 
-**4. Transportation and Logistics**
-- Rule: Fuel emission factor = 0.27 kg CO2 per km (for medium vehicles).
-- Calculation:
-  - E_transport = Distance (km) × 0.27
 
-**5. Water Usage**
-- Rules:
-  - Usage Limit: 100 L/kg of fabric.
-  - Effluent Treatment Plant (ETP) is mandatory.
-  - Recommend recycled water ≥ 30% of total usage.
-- Water Emission Factor: 0.0003 kg CO2 per liter.
-- Calculation:
-  - E_water = (Water_used_Liters × 0.0003) - (Recycled_water_Liters × 0.0001)
+    const reportHtml = `
+    <html>
+      <head>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+          .header { text-align: center; border-bottom: 2px solid #006400; padding-bottom: 10px; }
+          .header h1 { color: #006400; margin: 0; }
+          .header p { margin: 0; font-size: 1.1em; }
+          .section { margin-top: 30px; }
+          .section h2 { color: #006400; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+          .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+          .card { background: #f9f9f9; border: 1px solid #eee; border-radius: 8px; padding: 15px; }
+          .card h3 { margin-top: 0; color: #333; }
+          .summary-card { background-color: #e8f5e9; border-left: 5px solid #4CAF50; padding: 20px; margin-top: 20px; }
+          .summary-card .value { font-size: 2em; font-weight: bold; color: #4CAF50; }
+          ul { padding-left: 20px; }
+          li { margin-bottom: 10px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Sustainability Report</h1>
+            <p>For: ${input.companyName}</p>
+          </div>
+    
+          <div class="section">
+            <h2>Executive Summary</h2>
+            <div class="summary-card">
+              <div>Total Annual Carbon Footprint</div>
+              <div class="value">${totalYearlyTons.toFixed(2)} tCO₂e</div>
+              <div>ESG Rating: <strong>${score}</strong></div>
+            </div>
+            <p style="margin-top: 15px;">This report details the carbon emissions based on the data provided for a typical operational month, extrapolated to an annual figure. The primary emission sources are electricity consumption and the use of diesel and coal for thermal energy.</p>
+          </div>
+    
+          <div class="section">
+            <h2>Emission Breakdown (Monthly)</h2>
+            <div class="grid">
+              <div class="card">
+                <h3>Electricity</h3>
+                <p><strong>Usage:</strong> ${electricityKwh.toLocaleString()} kWh</p>
+                <p><strong>Emissions:</strong> ${emissionsElectricity.toFixed(2)} kg CO₂e</p>
+              </div>
+              <div class="card">
+                <h3>Diesel</h3>
+                <p><strong>Usage:</strong> ${dieselLitres.toLocaleString()} litres</p>
+                <p><strong>Emissions:</strong> ${emissionsDiesel.toFixed(2)} kg CO₂e</p>
+              </div>
+              <div class="card">
+                <h3>Coal</h3>
+                <p><strong>Usage:</strong> ${coalTons.toLocaleString()} tons</p>
+                <p><strong>Emissions:</strong> ${emissionsCoal.toFixed(2)} kg CO₂e</p>
+              </div>
+              <div class="card">
+                <h3>Total Monthly</h3>
+                <p><strong>Total:</strong> ${totalMonthlyKg.toFixed(2)} kg CO₂e</p>
+              </div>
+            </div>
+            <div style="text-align: center; margin-top: 20px; color: #666;">[Chart: Bar graph showing monthly emissions by source: Electricity, Diesel, Coal]</div>
+          </div>
+          
+          <div class="section">
+            <h2>Recommendations</h2>
+            <ul>
+              ${recommendations.map(rec => `<li>${rec}</li>`).join('')}
+            </ul>
+          </div>
+        </div>
+      </body>
+    </html>
+    `;
 
-**6. Waste Generation**
-- Rules:
-  - Solid waste < 10% of total production weight.
-  - At least 30% waste must be recycled.
-- Calculation:
-  - E_waste = (Waste_generated_kg × 0.5) - (Recycled_waste_kg × 0.2)
-
-**7. Overall Carbon Emission Standard (India)**
-- Benchmark: 1.7 to 2.5 tCO2e per ton of fabric produced.
-- Compliance Limit: Below 2.5 tCO2e per ton fabric per year.
-
-**FINAL CALCULATION:**
-- Total_Carbon_Emission_kg = E_spinning + E_dyeing + E_finishing + E_transport + E_water + E_waste
-- Total_Carbon_Emission_tCO2e = Total_Carbon_Emission_kg / 1000
-
-**YOUR TASK:**
-1.  Analyze the provided JSON data according to the rules above.
-2.  Perform all calculations for each category and then calculate the final 'Total_Carbon_Emission_tCO2e'.
-3.  Generate a visually appealing, well-structured HTML report. The HTML should be self-contained with CSS for styling.
-4.  The report MUST include:
-    - An executive summary.
-    - A section for each emission category with the calculated emissions.
-    - Graphical representations of the data (use placeholder descriptions for charts, e.g., "[Bar chart showing emissions by category]").
-    - A comparison of the company's performance against the Indian benchmark (e.g., tCO2e per ton of fabric).
-    - A "Sustainability Score" (e.g., Compliant, High Performer, Needs Improvement).
-    - Actionable recommendations for improvement based on the analysis.
-5.  Return the final HTML report, the total emissions number, the score, and a list of recommendations in the specified JSON format.
-`,
-});
-
-const generateSustainabilityReportFlow = ai.defineFlow(
-  {
-    name: 'generateSustainabilityReportFlow',
-    inputSchema: GenerateSustainabilityReportInputSchema,
-    outputSchema: GenerateSustainabilityReportOutputSchema,
-  },
-  async input => {
-    const {output} = await prompt(input);
-    return output!;
-  }
-);
+    return {
+        reportHtml,
+        totalEmissions: totalYearlyTons,
+        sustainabilityScore: score,
+        recommendations,
+    };
+}
