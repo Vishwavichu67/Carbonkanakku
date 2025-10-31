@@ -20,7 +20,7 @@ export default function AnalysisPage() {
   const { data: userDoc } = useDoc<any>(userDocPath);
   
   const companyDataPath = userDoc?.companyId ? `companies/${userDoc.companyId}/data` : null;
-  const { data: companyData, loading: companyDataLoading } = useCollection<any>(companyDataPath || '', { orderBy: 'createdAt', limit: 12 });
+  const { data: companyData, loading: companyDataLoading } = useCollection<any>(companyDataPath || '', { orderBy: 'createdAt', limit: 12, skip: !companyDataPath });
 
   const { trendData, benchmarkComparison } = useMemo(() => {
     if (!companyData || companyData.length === 0) {
@@ -177,3 +177,5 @@ export default function AnalysisPage() {
     </div>
   );
 }
+
+    

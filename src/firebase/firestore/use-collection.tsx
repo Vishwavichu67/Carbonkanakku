@@ -29,17 +29,21 @@ export function useCollection<T>(
   options?: {
     orderBy?: string;
     limit?: number;
+    skip?: boolean;
   }
 ): CollectionData<T> {
   const firestore = useFirestore();
   const [data, setData] = useState<T[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!options?.skip);
   const [error, setError] = useState<FirestoreError | null>(null);
   const [lastDoc, setLastDoc] = useState<any>(null);
   const [hasMore, setHasMore] = useState(true);
 
   useEffect(() => {
-    if (!firestore) return;
+    if (!firestore || options?.skip) {
+        setLoading(false);
+        return;
+    }
     setLoading(true);
 
     let q: Query<DocumentData> = collection(firestore, path);
@@ -75,7 +79,7 @@ export function useCollection<T>(
     );
 
     return () => unsubscribe();
-  }, [firestore, path, options?.orderBy, options?.limit]);
+  }, [firestore, path, options?.orderBy, options?.limit, options?.skip]);
 
   const loadMore = () => {
     if (!firestore || !lastDoc || !hasMore || loading) return;
@@ -113,3 +117,5 @@ export function useCollection<T>(
 
   return { data, loading, error, loadMore: options?.limit ? loadMore : undefined, hasMore };
 }
+
+    

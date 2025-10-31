@@ -41,7 +41,7 @@ export default function DashboardPage() {
   const { data: userDoc } = useDoc<any>(userDocPath);
   
   const companyDataPath = userDoc?.companyId ? `companies/${userDoc.companyId}/data` : null;
-  const { data: companyData, loading: companyDataLoading } = useCollection<any>(companyDataPath || '', { orderBy: 'createdAt', limit: 6 });
+  const { data: companyData, loading: companyDataLoading } = useCollection<any>(companyDataPath || '', { orderBy: 'createdAt', limit: 6, skip: !companyDataPath });
 
   const { chartData, currentFootprint, lastMonthComparison, recentActivity } = useMemo(() => {
     if (!companyData || companyData.length === 0) {
@@ -245,3 +245,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
