@@ -18,11 +18,11 @@ export default function ReportsPage() {
   const [fileName, setFileName] = useState('');
   const [report, setReport] = useState<GenerateSustainabilityReportOutput | null>(null);
   const { toast } = useToast();
-  const { user } = useUser();
+  const { user, loading: userLoading } = useUser();
   const userDocPath = user ? `users/${user.uid}` : null;
-  const { data: userDoc } = useDoc<any>(userDocPath);
+  const { data: userDoc, loading: userDocLoading } = useDoc<any>(userDocPath);
   const companyDocPath = userDoc?.companyId ? `companies/${userDoc.companyId}` : null;
-  const { data: companyDoc } = useDoc<any>(companyDocPath);
+  const { data: companyDoc, loading: companyDocLoading } = useDoc<any>(companyDocPath);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
@@ -110,6 +110,8 @@ export default function ReportsPage() {
       windowWidth: 800 // The width of the 'virtual' browser window to render the HTML
     });
   };
+  
+  const isDataLoading = userLoading || userDocLoading || companyDocLoading;
 
   return (
     <div className="space-y-6">
@@ -130,7 +132,7 @@ export default function ReportsPage() {
                   </div>
                   {fileName && <p className="text-sm text-muted-foreground">Selected file: {fileName}</p>}
                 </div>
-                <Button onClick={handleGenerateReport} disabled={isGenerating || !file} className="w-full">
+                <Button onClick={handleGenerateReport} disabled={isGenerating || !file || isDataLoading} className="w-full">
                   {isGenerating ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
