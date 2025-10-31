@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { read, utils } from 'xlsx';
 import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { useUser } from '@/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -16,11 +17,16 @@ interface ReportOutput {
   totalEmissions: number;
   sustainabilityScore: string;
   recommendations: string[];
+  breakdown: { source: string; usage: string; emission: string; }[];
+  totalMonthlyKg: number;
 }
+
+const toTitleCase = (str: string) => str.replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 
 const generateLocalReport = (excelData: any[], companyName: string): ReportOutput => {
   let totalMonthlyKg = 0;
   const recommendations: string[] = [];
+  const breakdown: { source: string; usage: string; emission: string; }[] = [];
   
   const emissionSources = [
     { key: 'electricity usage', factor: 0.82, unit: 'kWh', threshold: 20000, recommendation: "High electricity usage detected. Consider upgrading to BEE 5-star rated motors or installing solar panels to reduce grid dependency.", randomRange: [15000, 25000] },
@@ -68,8 +74,7 @@ const generateLocalReport = (excelData: any[], companyName: string): ReportOutpu
   }
 
   let breakdownHtml = '';
-  const toTitleCase = (str: string) => str.replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
-
+  
   emissionSources.forEach(source => {
     let value = 0;
     if (useRandomData && source.randomRange) {
@@ -83,6 +88,7 @@ const generateLocalReport = (excelData: any[], companyName: string): ReportOutpu
       totalMonthlyKg += emission;
       const displayName = toTitleCase(source.key.replace(/ usage| distance| used| waste/gi, ''));
       breakdownHtml += `<tr><td style="padding: 8px; border-bottom: 1px solid #E9E7DA;">${displayName}</td><td style="padding: 8px; border-bottom: 1px solid #E9E7DA;">${value.toLocaleString(undefined, {maximumFractionDigits: 2})} ${source.unit}</td><td style="padding: 8px; border-bottom: 1px solid #E9E7DA; text-align: right;">${emission.toFixed(2)} kg CO₂e</td></tr>`;
+      breakdown.push({ source: displayName, usage: `${value.toLocaleString(undefined, {maximumFractionDigits: 2})} ${source.unit}`, emission: `${emission.toFixed(2)} kg CO₂e` });
       if (source.threshold && value > source.threshold && source.recommendation) {
         recommendations.push(source.recommendation);
       }
@@ -102,6 +108,7 @@ const generateLocalReport = (excelData: any[], companyName: string): ReportOutpu
         totalMonthlyKg += reduction;
         const displayName = toTitleCase(source.key.replace(/ waste| water/gi, ''));
         breakdownHtml += `<tr><td style="padding: 8px; border-bottom: 1px solid #E9E7DA;">${displayName} (Credit)</td><td style="padding: 8px; border-bottom: 1px solid #E9E7DA;">${value.toLocaleString(undefined, {maximumFractionDigits: 2})} ${source.unit}</td><td style="padding: 8px; border-bottom: 1px solid #E9E7DA; text-align: right; color: green;">${reduction.toFixed(2)} kg CO₂e</td></tr>`;
+        breakdown.push({ source: `${displayName} (Credit)`, usage: `${value.toLocaleString(undefined, {maximumFractionDigits: 2})} ${source.unit}`, emission: `${reduction.toFixed(2)} kg CO₂e` });
       }
   });
   
@@ -112,7 +119,6 @@ const generateLocalReport = (excelData: any[], companyName: string): ReportOutpu
   if (recommendations.length === 0) {
     recommendations.push("Your operations appear efficient based on the data. Continue monitoring and explore new green technologies to maintain high performance.");
   }
-
 
   const totalEmissions = (totalMonthlyKg * 12) / 1000;
 
@@ -146,7 +152,7 @@ const generateLocalReport = (excelData: any[], companyName: string): ReportOutpu
         <tr>
           <td style="width: 65%; background-color: #F8F7F4; border-radius: 8px; padding: 20px; vertical-align: top;">
             <h2 style="color: #3F704D; font-family: 'Space Grotesk', sans-serif; margin-top: 0; font-size: 18px;">Executive Summary</h2>
-            <p style="font-size: 14px; line-height: 1.6;">This report provides an analysis of your company's carbon footprint based on the average of ${rowCount > 0 ? rowCount : 'sample'} data entries. The total estimated annual emission is <strong>${totalEmissions.toFixed(2)} tCO2e</strong>. This positions your operations in the <strong>'${sustainabilityScore}'</strong> category.</p>
+            <p style="font-size: 14px; line-height: 1.6;">This report provides an analysis of your company's carbon footprint based on the average of ${rowCount > 0 && !useRandomData ? rowCount : 'sample'} data entries. The total estimated annual emission is <strong>${totalEmissions.toFixed(2)} tCO2e</strong>. This positions your operations in the <strong>'${sustainabilityScore}'</strong> category.</p>
           </td>
           <td style="width: 35%; padding-left: 20px; text-align: center; vertical-align: middle;">
             <div style="background-color: #fff; border: 1px solid ${scoreColor}; border-radius: 8px; padding: 15px;">
@@ -190,7 +196,7 @@ const generateLocalReport = (excelData: any[], companyName: string): ReportOutpu
     </div>
   `;
 
-  return { reportHtml, totalEmissions, sustainabilityScore, recommendations };
+  return { reportHtml, totalEmissions, sustainabilityScore, recommendations, breakdown, totalMonthlyKg };
 };
 
 
@@ -257,23 +263,119 @@ export default function ReportsPage() {
   };
 
   const handleDownloadPdf = () => {
-    if (!report || !report.reportHtml) return;
-
-    const doc = new jsPDF({
-      orientation: 'p',
-      unit: 'pt',
-      format: 'a4',
-    });
+    if (!report) return;
+  
+    const doc = new jsPDF();
+    const pageMargin = 40;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const contentWidth = pageWidth - pageMargin * 2;
+    let currentY = pageMargin;
+  
+    // --- Header ---
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(22);
+    doc.setTextColor(63, 112, 77); // primary color
+    doc.text('Sustainability Report', pageMargin, currentY);
     
-    doc.html(report.reportHtml, {
-      callback: function (doc) {
-        doc.save(`Sustainability-Report-${user?.displayName || 'report'}.pdf`);
-      },
-      margin: [40, 40, 40, 40],
-      autoPaging: 'text',
-      width: 515, // A4 width in points (595) minus margins (40*2)
-      windowWidth: 1000, // Larger window width to help with scaling
+    currentY += 20;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(100); // muted-foreground
+    doc.text(`For: ${user?.displayName ? `${user.displayName}'s Factory` : 'Your Company'}`, pageMargin, currentY);
+    currentY += 15;
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, pageMargin, currentY);
+    
+    currentY += 25;
+    doc.setDrawColor(63, 112, 77);
+    doc.setLineWidth(1.5);
+    doc.line(pageMargin, currentY, contentWidth + pageMargin, currentY);
+    currentY += 30;
+  
+    // --- Executive Summary & Score ---
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(63, 112, 77);
+    doc.text('Executive Summary', pageMargin, currentY);
+    currentY += 20;
+  
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(51, 51, 51);
+    const summaryText = `This report provides an analysis of your company's carbon footprint. The total estimated annual emission is ${report.totalEmissions.toFixed(2)} tCO2e. This positions your operations in the '${report.sustainabilityScore}' category.`;
+    const summaryLines = doc.splitTextToSize(summaryText, contentWidth);
+    doc.text(summaryLines, pageMargin, currentY);
+    currentY += (summaryLines.length * 12) + 20;
+
+    let scoreColor: [number, number, number] = [239, 68, 68];
+    if (report.sustainabilityScore === 'High Performer') scoreColor = [34, 197, 94];
+    else if (report.sustainabilityScore === 'Compliant') scoreColor = [249, 115, 22];
+
+    doc.setFillColor(...scoreColor);
+    doc.roundedRect(pageMargin, currentY, contentWidth, 30, 3, 3, 'F');
+    doc.setTextColor(255);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text(report.sustainabilityScore, pageWidth / 2, currentY + 18, { align: 'center' });
+    currentY += 50;
+
+    // --- Emission Breakdown Table ---
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(63, 112, 77);
+    doc.text('Average Monthly Emission Breakdown', pageMargin, currentY);
+    currentY += 5;
+  
+    autoTable(doc, {
+        startY: currentY,
+        head: [['Source', 'Avg. Usage', 'Avg. Emission (kg CO₂e)']],
+        body: report.breakdown.map(item => [item.source, item.usage, item.emission]),
+        foot: [['Total Monthly Emissions', '', `${report.totalMonthlyKg.toFixed(2)} kg CO₂e`]],
+        theme: 'grid',
+        headStyles: { fillColor: [248, 247, 244], textColor: 50, fontStyle: 'bold' },
+        footStyles: { fillColor: [248, 247, 244], textColor: 50, fontStyle: 'bold', halign: 'right'},
+        didDrawPage: (data) => {
+            currentY = data.cursor?.y || currentY;
+        }
     });
+
+    currentY += 20; // Add space after table
+  
+    // --- Recommendations ---
+    if (currentY > pageHeight - 120) { // Check if new section fits
+        doc.addPage();
+        currentY = pageMargin;
+    }
+
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(63, 112, 77);
+    doc.text('Future Emission Reduction Strategies', pageMargin, currentY);
+    currentY += 20;
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(51, 51, 51);
+    report.recommendations.forEach(rec => {
+        const parts = rec.split(':');
+        const title = parts[0];
+        const body = parts.slice(1).join(':').trim();
+        
+        doc.setFont('helvetica', 'bold');
+        doc.text(`• ${title}:`, pageMargin, currentY, { maxWidth: contentWidth });
+        doc.setFont('helvetica', 'normal');
+        const bodyLines = doc.splitTextToSize(body, contentWidth - 10);
+        doc.text(bodyLines, pageMargin + 10, currentY + 12);
+        currentY += (bodyLines.length * 12) + 15;
+
+        if (currentY > pageHeight - 40) {
+            doc.addPage();
+            currentY = pageMargin;
+        }
+    });
+  
+    // --- Save the PDF ---
+    doc.save(`Sustainability-Report-${user?.displayName || 'report'}.pdf`);
   };
   
   if (userLoading) {
