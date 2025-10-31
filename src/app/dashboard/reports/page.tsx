@@ -1,14 +1,16 @@
 'use client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, FileUp, Star, Award, Loader2, FileText } from 'lucide-react';
+import { Download, FileUp, Star, Award, Loader2, FileText, AlertTriangle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { read, utils, WorkBook } from 'xlsx';
+import { read, utils } from 'xlsx';
 import jsPDF from 'jspdf';
-import { useUser, useDoc } from '@/firebase';
+import { useUser } from '@/firebase';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Logo } from '@/components/logo';
 
 interface ReportOutput {
   reportHtml: string;
@@ -46,7 +48,7 @@ const generateLocalReport = (excelData: any[], companyName: string): ReportOutpu
     if (value > 0) {
       const emission = value * source.factor;
       totalMonthlyKg += emission;
-      breakdownHtml += `<tr><td>${source.key}</td><td>${value.toLocaleString()} ${source.unit}</td><td>${emission.toFixed(2)} kg CO₂e</td></tr>`;
+      breakdownHtml += `<tr><td style="padding: 8px; border-bottom: 1px solid #E9E7DA;">${source.key}</td><td style="padding: 8px; border-bottom: 1px solid #E9E7DA;">${value.toLocaleString()} ${source.unit}</td><td style="padding: 8px; border-bottom: 1px solid #E9E7DA; text-align: right;">${emission.toFixed(2)} kg CO₂e</td></tr>`;
       if (source.threshold && value > source.threshold) {
         recommendations.push(source.recommendation);
       }
@@ -58,7 +60,7 @@ const generateLocalReport = (excelData: any[], companyName: string): ReportOutpu
       if (value > 0) {
         const reduction = value * source.factor;
         totalMonthlyKg += reduction;
-        breakdownHtml += `<tr><td>${source.key} (Credit)</td><td>${value.toLocaleString()} ${source.unit}</td><td style="color: green;">${reduction.toFixed(2)} kg CO₂e</td></tr>`;
+        breakdownHtml += `<tr><td style="padding: 8px; border-bottom: 1px solid #E9E7DA;">${source.key} (Credit)</td><td style="padding: 8px; border-bottom: 1px solid #E9E7DA;">${value.toLocaleString()} ${source.unit}</td><td style="padding: 8px; border-bottom: 1px solid #E9E7DA; text-align: right; color: green;">${reduction.toFixed(2)} kg CO₂e</td></tr>`;
       }
   });
 
@@ -75,42 +77,66 @@ const generateLocalReport = (excelData: any[], companyName: string): ReportOutpu
   } else if (totalEmissions <= 250) {
     sustainabilityScore = "Compliant";
   }
+  
+  const scoreColor = sustainabilityScore === 'High Performer' ? '#22c55e' : (sustainabilityScore === 'Compliant' ? '#f97316' : '#ef4444');
 
   const reportHtml = `
-    <div style="font-family: Arial, sans-serif; color: #333;">
-      <h1 style="color: #3F704D; border-bottom: 2px solid #E9E7DA; padding-bottom: 10px;">Sustainability Report for ${companyName}</h1>
-      
-      <div style="background-color: #f9f9f9; border: 1px solid #eee; padding: 15px; border-radius: 8px; margin: 20px 0;">
-        <h2 style="color: #3F704D; margin-top: 0;">Executive Summary</h2>
-        <p>This report provides an analysis of your company's carbon footprint based on the data provided. The total estimated annual emission is <strong>${totalEmissions.toFixed(2)} tCO2e</strong>.</p>
-        <p>Your current sustainability score is: <strong style="color: ${sustainabilityScore === 'High Performer' ? 'green' : (sustainabilityScore === 'Compliant' ? 'orange' : 'red')}">${sustainabilityScore}</strong>.</p>
-      </div>
+    <div style="font-family: 'PT Sans', sans-serif; color: #333; margin: 20px;">
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="vertical-align: middle;">
+            <h1 style="color: #3F704D; font-family: 'Space Grotesk', sans-serif; font-size: 28px; margin: 0;">Sustainability Report</h1>
+            <p style="font-size: 14px; margin: 0;">For: <strong>${companyName}</strong></p>
+            <p style="font-size: 12px; color: #666;">Generated on: ${new Date().toLocaleDateString()}</p>
+          </td>
+          <td style="text-align: right; vertical-align: middle;">
+             <img src="/icon.svg" alt="CarbonKanakku Logo" style="height: 40px;"/>
+          </td>
+        </tr>
+      </table>
 
-      <h3 style="color: #A07855;">Emission Breakdown (Monthly)</h3>
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+      <div style="margin: 30px 0; border-top: 2px solid #3F704D;"></div>
+
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+        <tr>
+          <td style="width: 65%; background-color: #F8F7F4; border-radius: 8px; padding: 20px; vertical-align: top;">
+            <h2 style="color: #3F704D; font-family: 'Space Grotesk', sans-serif; margin-top: 0; font-size: 18px;">Executive Summary</h2>
+            <p style="font-size: 14px; line-height: 1.6;">This report provides an analysis of your company's carbon footprint based on the data provided. The total estimated annual emission is <strong>${totalEmissions.toFixed(2)} tCO2e</strong>. This positions your operations in the <strong>'${sustainabilityScore}'</strong> category, suggesting areas for strategic improvement.</p>
+          </td>
+          <td style="width: 35%; padding-left: 20px; text-align: center; vertical-align: middle;">
+            <div style="background-color: #fff; border: 1px solid ${scoreColor}; border-radius: 8px; padding: 15px;">
+                <p style="margin:0; font-size: 14px; color: #666;">Sustainability Score</p>
+                <p style="margin: 5px 0; font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: bold; color: ${scoreColor};">${sustainabilityScore}</p>
+            </div>
+          </td>
+        </tr>
+      </table>
+      
+      <h3 style="color: #A07855; font-family: 'Space Grotesk', sans-serif; border-bottom: 1px solid #E9E7DA; padding-bottom: 5px; font-size: 16px;">Emission Breakdown (Monthly)</h3>
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 14px;">
         <thead>
-          <tr style="background-color: #E9E7DA;">
-            <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Source</th>
-            <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Usage</th>
-            <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Emission (kg CO₂e)</th>
+          <tr style="background-color: #F8F7F4; font-weight: bold;">
+            <th style="padding: 10px; text-align: left;">Source</th>
+            <th style="padding: 10px; text-align: left;">Usage</th>
+            <th style="padding: 10px; text-align: right;">Emission (kg CO₂e)</th>
           </tr>
         </thead>
         <tbody>
           ${breakdownHtml}
-          <tr style="background-color: #f2f2f2; font-weight: bold;">
-            <td colSpan="2" style="padding: 8px; border: 1px solid #ddd; text-align: right;">Total Monthly Emissions</td>
-            <td style="padding: 8px; border: 1px solid #ddd;">${totalMonthlyKg.toFixed(2)} kg CO₂e</td>
+          <tr style="background-color: #F8F7F4; font-weight: bold;">
+            <td colSpan="2" style="padding: 10px; text-align: right;">Total Monthly Emissions</td>
+            <td style="padding: 10px; text-align: right;">${totalMonthlyKg.toFixed(2)} kg CO₂e</td>
           </tr>
         </tbody>
       </table>
 
-      <h3 style="color: #A07855;">Future Emission Reduction Strategies</h3>
-      <ul style="list-style-type: disc; padding-left: 20px;">
-        ${recommendations.map(rec => `<li>${rec}</li>`).join('')}
+      <h3 style="color: #A07855; font-family: 'Space Grotesk', sans-serif; border-bottom: 1px solid #E9E7DA; padding-bottom: 5px; font-size: 16px;">Future Emission Reduction Strategies</h3>
+      <ul style="font-size: 14px; line-height: 1.8; list-style-type: '✔  '; padding-left: 20px;">
+        ${recommendations.map(rec => `<li><strong style="color: #3F704D;">${rec.split(':')[0]}:</strong>${rec.split(':')[1]}</li>`).join('')}
       </ul>
 
-      <h3 style="color: #A07855;">Predictive Analysis</h3>
-      <p>If current operational levels continue without intervention, your annual emissions are projected to remain around <strong>${totalEmissions.toFixed(2)} tCO2e/year</strong>. Implementing the recommended strategies could potentially reduce this by 15-20% within the next fiscal year.</p>
+      <h3 style="color: #A07855; font-family: 'Space Grotesk', sans-serif; border-bottom: 1px solid #E9E7DA; padding-bottom: 5px; font-size: 16px;">Predictive Analysis</h3>
+      <p style="font-size: 14px; line-height: 1.6;">If current operational levels continue without intervention, your annual emissions are projected to remain around <strong>${totalEmissions.toFixed(2)} tCO2e/year</strong>. Implementing the recommended strategies could potentially reduce this by 15-20% within the next fiscal year.</p>
     </div>
   `;
 
@@ -124,9 +150,7 @@ export default function ReportsPage() {
   const [fileName, setFileName] = useState('');
   const [report, setReport] = useState<ReportOutput | null>(null);
   const { toast } = useToast();
-  const { user } = useUser();
-  const userDocPath = user ? `users/${user.uid}` : null;
-  const { data: userDoc, loading: userDocLoading } = useDoc<any>(userDocPath);
+  const { user, loading: userLoading } = useUser();
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
@@ -162,6 +186,7 @@ export default function ReportsPage() {
     setReport(null);
 
     try {
+      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate processing time
       const arrayBuffer = await file.arrayBuffer();
       const workbook = read(arrayBuffer, { type: 'buffer' });
       const sheetName = workbook.SheetNames[0];
@@ -178,7 +203,7 @@ export default function ReportsPage() {
         return;
       }
       
-      const result = generateLocalReport(jsonData, userDoc?.companyName || "Your Company");
+      const result = generateLocalReport(jsonData, user?.displayName ? `${user.displayName}'s Factory` : "Your Company");
 
       setReport(result);
       toast({
@@ -200,19 +225,42 @@ export default function ReportsPage() {
   const handleDownloadPdf = () => {
     if (!report || !report.reportHtml) return;
 
-    const doc = new jsPDF();
+    const doc = new jsPDF({
+      orientation: 'p',
+      unit: 'px',
+      format: 'a4',
+    });
     
     doc.html(report.reportHtml, {
       callback: function (doc) {
-        doc.save(`Sustainability-Report-${userDoc?.companyName || 'report'}.pdf`);
+        doc.save(`Sustainability-Report-${user?.displayName || 'report'}.pdf`);
       },
-      x: 10,
-      y: 10,
-      width: 180,
-      windowWidth: 800
+      x: 0,
+      y: 0,
+      width: 445,
+      windowWidth: 445
     });
   };
   
+  if (userLoading) {
+      return (
+          <div className="space-y-6">
+              <Skeleton className="h-10 w-96" />
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2">
+                    <Card>
+                        <CardHeader><Skeleton className="h-8 w-64" /><Skeleton className="h-4 w-full mt-2" /></CardHeader>
+                        <CardContent><Skeleton className="h-24 w-full" /></CardContent>
+                    </Card>
+                </div>
+                 <div className="lg:col-span-1">
+                    <Card><CardHeader><Skeleton className="h-8 w-48" /></CardHeader><CardContent><Skeleton className="h-24 w-full" /></CardContent></Card>
+                 </div>
+              </div>
+          </div>
+      )
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold font-headline">AI-Powered Insights &amp; Reports</h1>
@@ -261,17 +309,48 @@ export default function ReportsPage() {
               <CardDescription>Your badge reflects your commitment to sustainability.</CardDescription>
             </CardHeader>
             <CardContent className="text-center">
-              <div className="bg-background rounded-lg p-4 flex flex-col items-center">
-                <Star className="h-16 w-16 text-yellow-500 fill-yellow-400 mb-2" />
-                <p className="font-bold text-lg font-headline">High Performer</p>
-                <p className="text-sm text-muted-foreground">Top 20% in Industry</p>
-              </div>
-               <Button variant="outline" className="mt-4 w-full">Share Badge</Button>
+                {isGenerating ? (
+                     <div className="bg-background rounded-lg p-4 flex flex-col items-center">
+                        <Skeleton className="h-16 w-16 mb-2 rounded-full" />
+                        <Skeleton className="h-6 w-32 mb-1" />
+                        <Skeleton className="h-4 w-24" />
+                     </div>
+                ) : report ? (
+                    <div className="bg-background rounded-lg p-4 flex flex-col items-center">
+                        <Star className="h-16 w-16 text-yellow-500 fill-yellow-400 mb-2" />
+                        <p className="font-bold text-lg font-headline">{report.sustainabilityScore}</p>
+                        <p className="text-sm text-muted-foreground">Based on latest report</p>
+                    </div>
+                ) : (
+                     <div className="bg-background rounded-lg p-4 flex flex-col items-center text-muted-foreground">
+                        <Award className="h-16 w-16 mb-2" />
+                        <p className="font-bold text-lg font-headline">Awaiting Data</p>
+                        <p className="text-sm">Upload a file to see your score</p>
+                     </div>
+                )}
+               <Button variant="outline" className="mt-4 w-full" disabled={!report}>Share Badge</Button>
             </CardContent>
           </Card>
         </div>
       </div>
       
+      {isGenerating && (
+          <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                    <div>
+                        <Skeleton className="h-8 w-48" />
+                        <Skeleton className="h-4 w-72 mt-2" />
+                    </div>
+                    <Skeleton className="h-10 w-36" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-96 w-full" />
+              </CardContent>
+          </Card>
+      )}
+
       {report && (
         <Card>
           <CardHeader>
@@ -298,6 +377,15 @@ export default function ReportsPage() {
             />
           </CardContent>
         </Card>
+      )}
+
+      {!report && !isGenerating && (
+         <Card className="text-center py-16">
+            <CardHeader>
+                <CardTitle className="font-headline flex items-center justify-center gap-2"><AlertTriangle className="text-amber-500" />Your Report Awaits</CardTitle>
+                <CardDescription>Upload your monthly data using the panel above to generate your comprehensive sustainability analysis.</CardDescription>
+            </CardHeader>
+         </Card>
       )}
     </div>
   );

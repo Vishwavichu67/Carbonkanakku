@@ -27,8 +27,8 @@ import {
 } from "recharts";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
-import { useUser, useDoc, useCollection } from "@/firebase";
-import { useMemo } from "react";
+import { useUser, useDoc } from "@/firebase";
+import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const benchmarkData = [
@@ -38,49 +38,47 @@ const benchmarkData = [
 export default function DashboardPage() {
   const { user } = useUser();
   const userDocPath = user ? `users/${user.uid}` : null;
-  const { data: userDoc } = useDoc<any>(userDocPath);
-  
-  const companyDataPath = userDoc?.companyId ? `companies/${userDoc.companyId}/data` : null;
-  const { data: companyData, loading: companyDataLoading } = useCollection<any>(companyDataPath || '', { orderBy: 'createdAt', limit: 6, skip: !companyDataPath });
+  const { data: userDoc, loading: userDocLoading } = useDoc<any>(userDocPath);
 
-  const { chartData, currentFootprint, lastMonthComparison, recentActivity } = useMemo(() => {
-    if (!companyData || companyData.length === 0) {
-      return { chartData: [], currentFootprint: 0, lastMonthComparison: 0, recentActivity: null };
-    }
+  const [loading, setLoading] = useState(true);
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [currentFootprint, setCurrentFootprint] = useState(0);
+  const [lastMonthComparison, setLastMonthComparison] = useState(0);
+  const [recentActivity, setRecentActivity] = useState<any>(null);
 
-    const sortedData = [...companyData].sort((a, b) => a.createdAt.seconds - b.createdAt.seconds);
 
-    const calcFootprint = (entry: any) => {
-        const electricity = entry.data['electricity-usage'] || 0;
-        const diesel = entry.data['diesel-usage'] || 0;
-        const coal = entry.data['coal-usage'] || 0;
-        const monthlyKg = (electricity * 0.82) + (diesel * 2.68) + (coal * 2420);
-        return (monthlyKg * 12) / 1000;
-    };
-    
-    const chartData = sortedData.map(entry => ({
-      name: new Date(entry.createdAt.seconds * 1000).toLocaleString('default', { month: 'short' }),
-      value: calcFootprint(entry).toFixed(2),
-    }));
+  useEffect(() => {
+    // Simulate fetching dynamic data
+    setLoading(true);
+    const timer = setTimeout(() => {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+      const mockChartData = months.map(month => ({
+        name: month,
+        value: (Math.random() * (25 - 10) + 10).toFixed(2),
+      }));
 
-    const currentFootprint = sortedData.length > 0 ? calcFootprint(sortedData[sortedData.length - 1]) : 0;
-    const previousFootprint = sortedData.length > 1 ? calcFootprint(sortedData[sortedData.length - 2]) : 0;
-    const lastMonthComparison = previousFootprint > 0 ? ((currentFootprint - previousFootprint) / previousFootprint) * 100 : 0;
+      const mockCurrentFootprint = parseFloat(mockChartData[mockChartData.length - 1].value);
+      const previousFootprint = parseFloat(mockChartData[mockChartData.length - 2].value);
+      const mockLastMonthComparison = ((mockCurrentFootprint - previousFootprint) / previousFootprint) * 100;
+      
+      setChartData(mockChartData);
+      setCurrentFootprint(mockCurrentFootprint);
+      setLastMonthComparison(mockLastMonthComparison);
 
-    const lastSubmission = sortedData[sortedData.length - 1];
-    const recentActivity = lastSubmission ? {
-        subdomain: lastSubmission.subdomain,
-        date: new Date(lastSubmission.createdAt.seconds * 1000)
-    } : null;
+      setRecentActivity({
+          subdomain: "Spinning Units",
+          date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
+      });
+      setLoading(false);
+    }, 1000);
 
-    return { chartData, currentFootprint, lastMonthComparison, recentActivity };
-
-  }, [companyData]);
+    return () => clearTimeout(timer);
+  }, []);
 
   const yourBenchmark = { name: "Your Unit", co2: currentFootprint, color: "hsl(var(--primary))" };
   const combinedBenchmarkData = [yourBenchmark, ...benchmarkData];
 
-  if (companyDataLoading) {
+  if (loading || userDocLoading) {
     return (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             <Card className="lg:col-span-2"><CardHeader><Skeleton className="h-6 w-48" /></CardHeader><CardContent><Skeleton className="h-24 w-full" /></CardContent></Card>
@@ -114,8 +112,9 @@ export default function DashboardPage() {
               <span>Moderate</span>
               <span>High</span>
             </div>
-            <Progress value={(currentFootprint / 300) * 100} className="h-3" />
-            <p className="text-center text-sm mt-2 text-muted-foreground">Your emissions are in the 'Moderate-High' range.</p>
+            <Progress value={(currentFootprint / 30)}
+              className="h-3" />
+            <p className="text-center text-sm mt-2 text-muted-foreground">Your emissions are in the 'Moderate' range.</p>
           </div>
         </CardContent>
       </Card>
@@ -200,7 +199,7 @@ export default function DashboardPage() {
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={chartData}>
               <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
-              <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+              <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} unit="t" />
               <Tooltip
                 contentStyle={{
                   background: "hsl(var(--background))",
@@ -239,11 +238,9 @@ export default function DashboardPage() {
                </Bar>
             </BarChart>
           </ResponsiveContainer>
-           <p className="text-center text-sm mt-2 text-destructive font-semibold">Your unit emits {(currentFootprint/15.2 * 100 - 100).toFixed(0)}% more CO₂ than the regional average.</p>
+           <p className="text-center text-sm mt-2 text-destructive font-semibold">Your unit emits {Math.abs(currentFootprint/15.2 * 100 - 100).toFixed(0)}% more CO₂ than the regional average.</p>
         </CardContent>
       </Card>
     </div>
   );
 }
-
-    

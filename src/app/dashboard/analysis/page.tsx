@@ -10,50 +10,40 @@ import {
   Tooltip,
   Legend
 } from 'recharts';
-import { useUser, useDoc, useCollection } from "@/firebase";
-import { useMemo } from 'react';
+import { useUser } from "@/firebase";
+import { useState, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function AnalysisPage() {
-  const { user } = useUser();
-  const userDocPath = user ? `users/${user.uid}` : null;
-  const { data: userDoc } = useDoc<any>(userDocPath);
-  
-  const companyDataPath = userDoc?.companyId ? `companies/${userDoc.companyId}/data` : null;
-  const { data: companyData, loading: companyDataLoading } = useCollection<any>(companyDataPath || '', { orderBy: 'createdAt', limit: 12, skip: !companyDataPath });
+    const { user, loading: userLoading } = useUser();
+    const [loading, setLoading] = useState(true);
+    const [trendData, setTrendData] = useState<any[]>([]);
+    const [benchmarkComparison, setBenchmarkComparison] = useState(0);
 
-  const { trendData, benchmarkComparison } = useMemo(() => {
-    if (!companyData || companyData.length === 0) {
-      return { trendData: [], benchmarkComparison: 0 };
-    }
+    useEffect(() => {
+        setLoading(true);
+        const timer = setTimeout(() => {
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const mockTrendData = months.map(month => ({
+                name: month,
+                electricity: Math.floor(Math.random() * (25000 - 15000) + 15000),
+                water: Math.floor(Math.random() * (1600000 - 1400000) + 1400000),
+                waste: Math.floor(Math.random() * (500 - 300) + 300),
+            }));
+            
+            const latestElectricity = mockTrendData[mockTrendData.length - 1].electricity;
+            const yourCO2 = (latestElectricity * 0.82 * 12) / 1000;
+            const industryAverage = 15.2 * 100; // Example average tCO2e
+            const mockBenchmarkComparison = ((yourCO2 / industryAverage) * 100) - 100;
 
-    const sortedData = [...companyData].sort((a, b) => a.createdAt.seconds - b.createdAt.seconds);
+            setTrendData(mockTrendData);
+            setBenchmarkComparison(mockBenchmarkComparison);
+            setLoading(false);
+        }, 1000);
+        return () => clearTimeout(timer);
+    }, []);
 
-    const trendData = sortedData.map(entry => {
-      const electricity = entry.data['electricity-usage'] || 0;
-      const water = entry.data['water-used'] || 0;
-      const waste = entry.data['fabric-waste'] || 0;
-      
-      return {
-        name: new Date(entry.createdAt.seconds * 1000).toLocaleString('default', { month: 'short' }),
-        electricity,
-        water,
-        waste
-      };
-    });
-
-    const latestEntry = sortedData[sortedData.length - 1];
-    const latestElectricity = latestEntry.data['electricity-usage'] || 0;
-    const latestDiesel = latestEntry.data['diesel-usage'] || 0;
-    const latestCoal = latestEntry.data['coal-usage'] || 0;
-    const yourCO2 = ((latestElectricity * 0.82 + latestDiesel * 2.68 + latestCoal * 2420) * 12) / 1000;
-    const industryAverage = 15.2 * 100; // Example average
-    const benchmarkComparison = ((yourCO2 / industryAverage) * 100) - 100;
-
-    return { trendData, benchmarkComparison };
-  }, [companyData]);
-
-  if (companyDataLoading) {
+  if (loading || userLoading) {
       return (
         <div className="space-y-6">
             <Skeleton className="h-10 w-96" />
@@ -100,32 +90,26 @@ export default function AnalysisPage() {
             <TrendingUp />
             Emission Trend Analysis
           </CardTitle>
-          <CardDescription>A detailed look at your resource consumption and emissions over time.</CardDescription>
+          <CardDescription>A detailed look at your resource consumption and emissions over the past year.</CardDescription>
         </CardHeader>
         <CardContent>
-          {trendData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={350}>
-              <LineChart data={trendData}>
-                <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    background: "hsl(var(--background))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "var(--radius)",
-                  }}
-                />
-                <Legend wrapperStyle={{ fontSize: "14px" }}/>
-                <Line type="monotone" dataKey="electricity" stroke="hsl(var(--chart-1))" strokeWidth={2} name="Electricity (kWh)" />
-                <Line type="monotone" dataKey="water" stroke="hsl(var(--chart-2))" strokeWidth={2} name="Water (Liters)" />
-                <Line type="monotone" dataKey="waste" stroke="hsl(var(--chart-3))" strokeWidth={2} name="Waste (kg)" />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-[350px] flex items-center justify-center text-muted-foreground">
-                <p>Submit data to see your emission trends.</p>
-            </div>
-          )}
+          <ResponsiveContainer width="100%" height={350}>
+            <LineChart data={trendData}>
+              <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+              <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+              <Tooltip
+                contentStyle={{
+                  background: "hsl(var(--background))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: "var(--radius)",
+                }}
+              />
+              <Legend wrapperStyle={{ fontSize: "14px" }}/>
+              <Line type="monotone" dataKey="electricity" stroke="hsl(var(--chart-1))" strokeWidth={2} name="Electricity (kWh)" />
+              <Line type="monotone" dataKey="water" stroke="hsl(var(--chart-2))" strokeWidth={2} name="Water (Liters)" />
+              <Line type="monotone" dataKey="waste" stroke="hsl(var(--chart-3))" strokeWidth={2} name="Waste (kg)" />
+            </LineChart>
+          </ResponsiveContainer>
         </CardContent>
       </Card>
 
@@ -139,13 +123,9 @@ export default function AnalysisPage() {
             <CardDescription>Your performance against industry averages.</CardDescription>
           </CardHeader>
           <CardContent>
-            {companyData.length > 0 ? (
-                <p>Your unit emits <span className="text-destructive font-bold">{benchmarkComparison.toFixed(0)}% more CO₂</span> than the Tiruppur average for spinning units.</p>
-            ) : (
-                <p className="text-muted-foreground">Submit data to see your industry benchmark.</p>
-            )}
+            <p>Your unit emits <span className="text-destructive font-bold">{benchmarkComparison.toFixed(0)}% more CO₂</span> than the Tiruppur average for spinning units.</p>
             <div className="h-48 flex items-center justify-center text-muted-foreground">
-                [Detailed Benchmark Chart]
+                [Detailed Benchmark Chart Placeholder]
             </div>
           </CardContent>
         </Card>
@@ -177,5 +157,3 @@ export default function AnalysisPage() {
     </div>
   );
 }
-
-    
